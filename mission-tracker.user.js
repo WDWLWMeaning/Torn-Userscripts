@@ -121,39 +121,51 @@
         let hasUrgent = false;
         let hasWarning = false;
         
-        for (const [missionId, mission] of Object.entries(missions)) {
-            // Skip if not a valid mission object
-            if (!mission || typeof mission !== 'object') continue;
-            
-            // Check various status fields - mission is "done" if completed, expired, or failed
-            const isCompleted = mission.completed === 1 || 
-                               mission.status === 'completed' || 
-                               mission.status === 'expired' ||
-                               mission.status === 'failed';
-            
-            // Skip completed missions
-            if (isCompleted) {
-                console.log(`[Mission Tracker] Skipping completed mission ${missionId}:`, mission.status);
+        // Missions structure: { "Duke": [ {title, status}, {title, status}, ... ] }
+        // Iterate through each mission giver (Duke, etc.)
+        for (const [giverName, missionList] of Object.entries(missions)) {
+            // Skip if not an array
+            if (!Array.isArray(missionList)) {
+                console.log(`[Mission Tracker] Skipping non-array entry for ${giverName}`);
                 continue;
             }
             
-            // This mission needs attention (in progress or waiting to accept)
-            incompleteCount++;
-            console.log(`[Mission Tracker] Counting incomplete mission ${missionId}:`, {
-                status: mission.status,
-                title: mission.title,
-                deadline: mission.deadline
-            });
-            
-            // Check deadline if available
-            if (mission.deadline) {
-                const hoursRemaining = (mission.deadline - now) / 3600;
-                console.log(`[Mission Tracker] Mission ${missionId} has ${hoursRemaining.toFixed(1)} hours remaining`);
+            // Iterate through each mission in the list
+            for (const mission of missionList) {
+                // Skip if not a valid mission object
+                if (!mission || typeof mission !== 'object') continue;
                 
-                if (hoursRemaining > 0 && hoursRemaining <= CONFIG.urgentHours) {
-                    hasUrgent = true;
-                } else if (hoursRemaining > 0 && hoursRemaining <= CONFIG.warningHours) {
-                    hasWarning = true;
+                console.log(`[Mission Tracker] Checking mission from ${giverName}:`, {
+                    title: mission.title,
+                    status: mission.status
+                });
+                
+                // Check various status fields - mission is "done" if completed, expired, or failed
+                const isCompleted = mission.completed === 1 || 
+                                   mission.status === 'completed' || 
+                                   mission.status === 'expired' ||
+                                   mission.status === 'failed';
+                
+                // Skip completed missions
+                if (isCompleted) {
+                    console.log(`[Mission Tracker] Skipping completed mission: ${mission.title} (${mission.status})`);
+                    continue;
+                }
+                
+                // This mission needs attention (in progress or waiting to accept)
+                incompleteCount++;
+                console.log(`[Mission Tracker] Counting incomplete mission: ${mission.title} (${mission.status})`);
+                
+                // Check deadline if available
+                if (mission.deadline) {
+                    const hoursRemaining = (mission.deadline - now) / 3600;
+                    console.log(`[Mission Tracker] Mission has ${hoursRemaining.toFixed(1)} hours remaining`);
+                    
+                    if (hoursRemaining > 0 && hoursRemaining <= CONFIG.urgentHours) {
+                        hasUrgent = true;
+                    } else if (hoursRemaining > 0 && hoursRemaining <= CONFIG.warningHours) {
+                        hasWarning = true;
+                    }
                 }
             }
         }
