@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Mission Tracker
 // @namespace    torn-mission-tracker
-// @version      1.0.3
+// @version      1.0.4
 // @description  Track Torn missions with urgency indicators (red <24h, yellow <48h)
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -71,6 +71,33 @@
     // API Client
     // ==========================================
     const TornAPI = {
+        fetchKeyInfo: () => {
+            const key = Storage.getKey();
+            if (!key) return Promise.reject('No API key configured');
+            
+            return new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url: `${CONFIG.apiBaseUrl}/key/?key=${key}`,
+                    headers: { 'Accept': 'application/json' },
+                    onload: (response) => {
+                        try {
+                            const data = JSON.parse(response.responseText);
+                            if (data.error) {
+                                reject(new Error(`API Error ${data.error.code}: ${data.error.error}`));
+                            } else {
+                                resolve(data);
+                            }
+                        } catch (e) {
+                            reject(new Error('Invalid JSON response'));
+                        }
+                    },
+                    onerror: () => reject(new Error('Network error')),
+                    ontimeout: () => reject(new Error('Request timeout'))
+                });
+            });
+        },
+        
         fetchMissions: () => {
             const key = Storage.getKey();
             if (!key) return Promise.reject('No API key configured');
@@ -320,9 +347,56 @@
     // ==========================================
     // Settings
     // ==========================================
-    function showSettings() {
+    async function showSettings() {
         const existing = document.getElementById('mission-tracker-settings');
         if (existing) existing.remove();
+        
+        // Fetch key info if we have a key
+        let keyInfoHtml = '';
+        const apiKey = Storage.getKey();
+        if (apiKey) {
+            try {
+                const keyInfo = await TornAPI.fetchKeyInfo();
+                const accessLevel = keyInfo.access_level || 'Unknown';
+                const selections = keyInfo.selections ? keyInfo.selections.join(', ') : 'N/A';
+                
+                keyInfoHtml = `
+                    <div style="
+                        background: #16213e;
+                        border: 1px solid #0f3460;
+                        border-radius: 5px;
+                        padding: 12px;
+                        margin: 15px 0;
+                        font-size: 12px;
+                    ">
+                        <div style="color: #888; margin-bottom: 5px;"><strong>Current API Key Info:</strong></div>
+                        <div style="color: #fff;">Access Level: <span style="color: #2ecc71;">${accessLevel}</span></div>
+                        <div style="color: #aaa; margin-top: 5px; font-size: 11px;">
+                            Available selections: ${selections}
+                        </div>
+                        ${!selections.includes('missions') ? `
+                            <div style="color: #e74c3c; margin-top: 8px; font-size: 11px;">
+                                ⚠️ This key doesn't have 'missions' access. Please create a new key with missions selection.
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            } catch (e) {
+                keyInfoHtml = `
+                    <div style="
+                        background: #16213e;
+                        border: 1px solid #e74c3c;
+                        border-radius: 5px;
+                        padding: 12px;
+                        margin: 15px 0;
+                        font-size: 12px;
+                        color: #e74c3c;
+                    ">
+                        Unable to verify API key: ${e.message}
+                    </div>
+                `;
+            }
+        }
         
         const modal = document.createElement('div');
         modal.id = 'mission-tracker-settings';
@@ -352,7 +426,7 @@
                         Torn API Key:
                     </label>
                     <input type="password" id="api-key-input" 
-                           value="${Storage.getKey()}" 
+                           value="${apiKey}" 
                            placeholder="Enter your 16-character API key"
                            style="
                                width: 100%;
@@ -366,8 +440,11 @@
                            ">
                     
                     <p style="font-size: 11px; color: #888; margin-top: 5px;">
-                        Find your API key at: <a href="https://www.torn.com/preferences.php#tab=api" target="_blank" style="color: #3498db;">torn.com/preferences.php#tab=api</a>
+                        Find your API key at: <a href="https://www.torn.com/preferences.php#tab=api" target="_blank" style="color: #3498db;">torn.com/preferences.php#tab=api</a><br>
+                        <strong>Required:</strong> Select "Missions" when creating your API key.
                     </p>
+                    
+                    ${keyInfoHtml}
                     
                     <div style="margin-top: 20px; display: flex; gap: 10px;">
                         <button id="save-mission-settings" style="
