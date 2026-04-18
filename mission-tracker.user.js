@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Torn Mission Tracker
 // @namespace    torn-mission-tracker
-// @version      2.0.8
-// @description  Track Torn missions with urgency indicators (red <24h, yellow <48h) via the Torn API v2
-// @author       Kevin
+// @version      3.0.0
+// @description  Track Torn missions with cyberpunk neon styling. Red alert for <24h, yellow for <48h.
+// @author       Kevin (🦝)
 // @match        https://www.torn.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
@@ -18,31 +18,53 @@
 // ==/UserScript==
 
 /**
- * Torn Mission Tracker
- *
- * Shows a badge with the count of incomplete missions.
- * - Red badge: At least one accepted mission has <24 hours remaining
- * - Yellow badge: At least one accepted mission has <48 hours remaining (but none <24h)
- * - Hidden: All missions are completed/failed
- *
- * Updates every 5 minutes with caching to respect API rate limits.
+ * ╔══════════════════════════════════════════════════════════╗
+ * ║  🦝 KEvin's Cyberpunk Mission Tracker v3.0.0              ║
+ * ║  Neon-lit mission tracking for the shadows of Torn City   ║
+ * ╚══════════════════════════════════════════════════════════╝
+ * 
+ * Theme: Cyberpunk Raccoon
+ * - Dark terminal aesthetic with neon accents
+ * - Hot pink (#ff006e) for urgent alerts
+ * - Cyan (#00f5d4) for system info
+ * - Purple (#8338ec) for depth
+ * - Monospace fonts, glowing effects, sharp edges
  */
 
 (function() {
     'use strict';
 
+    // ═══════════════════════════════════════════════════════════
+    // CONFIGURATION
+    // ═══════════════════════════════════════════════════════════
     const CONFIG = {
         apiBaseUrl: 'https://api.torn.com/v2',
-        updateInterval: 5 * 60 * 1000,
+        updateInterval: 5 * 60 * 1000, // 5 minutes
         cacheTtlMinutes: 5,
         urgentHours: 24,
         warningHours: 48,
-        requestComment: 'torn-mission-tracker'
+        requestComment: 'cyberpunk-mission-tracker-v3'
     };
 
-    let bubbleElement = null;
+    // Cyberpunk color palette
+    const NEON = {
+        pink: '#ff006e',
+        cyan: '#00f5d4',
+        purple: '#8338ec',
+        yellow: '#ffbe0b',
+        dark: '#0a0a0f',
+        panel: '#12121a',
+        border: '#1e1e2e',
+        text: '#e0e0e0',
+        textDim: '#6b6b8a'
+    };
+
+    let badgeElement = null;
     let updateTimer = null;
 
+    // ═══════════════════════════════════════════════════════════
+    // STORAGE
+    // ═══════════════════════════════════════════════════════════
     const Storage = {
         getKey: () => GM_getValue('torn_api_key', ''),
         setKey: (key) => GM_setValue('torn_api_key', key),
@@ -50,9 +72,7 @@
         getCache: (key) => {
             const data = GM_getValue(`cache_${key}`, null);
             const time = GM_getValue(`cache_${key}_time`, 0);
-            if (!data || (Date.now() - time) > CONFIG.cacheTtlMinutes * 60000) {
-                return null;
-            }
+            if (!data || (Date.now() - time) > CONFIG.cacheTtlMinutes * 60000) return null;
             return JSON.parse(data);
         },
 
@@ -67,12 +87,13 @@
         }
     };
 
+    // ═══════════════════════════════════════════════════════════
+    // API CLIENT
+    // ═══════════════════════════════════════════════════════════
     function buildApiUrl(path, query = {}) {
         const url = new URL(`${CONFIG.apiBaseUrl}${path}`);
         const key = Storage.getKey();
-        if (key) {
-            url.searchParams.set('key', key);
-        }
+        if (key) url.searchParams.set('key', key);
         url.searchParams.set('comment', CONFIG.requestComment);
 
         for (const [name, value] of Object.entries(query)) {
@@ -83,7 +104,6 @@
                 url.searchParams.set(name, value);
             }
         }
-
         return url.toString();
     }
 
@@ -100,11 +120,8 @@
                     onload: (response) => {
                         try {
                             const data = JSON.parse(response.responseText);
-                            if (data.error) {
-                                reject(new Error(`API Error ${data.error.code}: ${data.error.error}`));
-                            } else {
-                                resolve(data);
-                            }
+                            if (data.error) reject(new Error(`API Error ${data.error.code}: ${data.error.error}`));
+                            else resolve(data);
                         } catch {
                             reject(new Error('Invalid JSON response'));
                         }
@@ -128,10 +145,13 @@
         }
     };
 
+    // ═══════════════════════════════════════════════════════════
+    // MISSION PROCESSING
+    // ═══════════════════════════════════════════════════════════
     function processMissions(missionsPayload) {
         const givers = missionsPayload?.givers;
         if (!Array.isArray(givers)) {
-            console.log('[Mission Tracker] No mission giver data found');
+            console.log('[🦝 Mission Tracker] No mission giver data found');
             return { count: 0, urgent: false, warning: false };
         }
 
@@ -168,58 +188,18 @@
         };
     }
 
-    function createBubble() {
-        if (bubbleElement) return;
-
-        const missionsNav = document.getElementById('nav-missions');
-        if (!missionsNav) return; // Don't create if missions nav not found
-
-        bubbleElement = document.createElement('span');
-        bubbleElement.id = 'torn-mission-badge';
-
-        // Append to the area-row so we can position absolutely within it
-        const areaRow = missionsNav.querySelector('.area-row___iBD8N');
-        if (areaRow) {
-            areaRow.appendChild(bubbleElement);
-        }
-    }
-
-    // Watch for DOM changes to re-add badge if Torn's UI removes it
-    function setupMutationObserver() {
-        const observer = new MutationObserver(() => {
-            const existingBadge = document.getElementById('torn-mission-badge');
-            const missionsNav = document.getElementById('nav-missions');
-            
-            // Check if badge is missing or if it's not inside the area-row
-            if (!existingBadge || (missionsNav && !missionsNav.querySelector('.area-row___iBD8N #torn-mission-badge'))) {
-                // Badge was removed or moved, recreate it
-                if (existingBadge) existingBadge.remove();
-                bubbleElement = null;
-                createBubble();
-                // Re-apply current status
-                const cached = Storage.getCache('missions');
-                if (cached) {
-                    const status = processMissions(cached);
-                    updateBubble(status);
-                }
-            }
-        });
-
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-    }
-
-    function addStyles() {
-        if (document.getElementById('mission-tracker-styles')) return;
+    // ═══════════════════════════════════════════════════════════
+    // STYLES - Cyberpunk Raccoon Theme
+    // ═══════════════════════════════════════════════════════════
+    function injectStyles() {
+        if (document.getElementById('kevin-cyberpunk-styles')) return;
 
         GM_addStyle(`
-            /* Desktop: position badge on the far right, vertically centered */
-            #nav-missions {
-                position: relative;
-            }
+            /* ═══════════════════════════════════════════════════════════ */
+            /* 🦝 CYBERPUNK RACCOON THEME v3.0                              */
+            /* ═══════════════════════════════════════════════════════════ */
             
+            /* Mission Badge - Neon Core */
             #torn-mission-badge {
                 position: absolute;
                 right: 12px;
@@ -228,73 +208,278 @@
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                width: 16px;
-                height: 16px;
-                background: #3498db;
-                color: rgb(221, 221, 221);
-                border-radius: 50%;
+                width: 20px;
+                height: 20px;
+                background: ${NEON.dark};
+                color: ${NEON.cyan};
+                border: 1px solid ${NEON.cyan};
+                border-radius: 4px;
                 font-size: 11px;
                 font-weight: 700;
-                font-family: Arial, sans-serif;
+                font-family: 'Courier New', 'Consolas', monospace;
+                text-shadow: 0 0 5px ${NEON.cyan};
+                box-shadow: 0 0 10px rgba(0, 245, 212, 0.3), inset 0 0 5px rgba(0, 245, 212, 0.1);
                 pointer-events: none;
                 user-select: none;
-                line-height: 1;
+                letter-spacing: 0.5px;
             }
             
-            /* Mobile: smaller badge, positioned top-right */
-            @media (max-width: 768px) {
-                #torn-mission-badge {
-                    right: 4px;
-                    top: 4px;
-                    transform: none;
-                    width: 14px;
-                    height: 14px;
-                    font-size: 9px;
+            /* Urgent - Hot Pink Neon */
+            #torn-mission-badge.mission-urgent {
+                color: ${NEON.pink};
+                border-color: ${NEON.pink};
+                text-shadow: 0 0 8px ${NEON.pink}, 0 0 15px ${NEON.pink};
+                box-shadow: 0 0 15px rgba(255, 0, 110, 0.5), inset 0 0 8px rgba(255, 0, 110, 0.2);
+                animation: neon-pulse 1.5s ease-in-out infinite;
+            }
+            
+            /* Warning - Yellow Neon */
+            #torn-mission-badge.mission-warning {
+                color: ${NEON.yellow};
+                border-color: ${NEON.yellow};
+                text-shadow: 0 0 5px ${NEON.yellow};
+                box-shadow: 0 0 10px rgba(255, 190, 11, 0.4), inset 0 0 5px rgba(255, 190, 11, 0.1);
+            }
+            
+            /* Neon Pulse Animation */
+            @keyframes neon-pulse {
+                0%, 100% { 
+                    box-shadow: 0 0 15px rgba(255, 0, 110, 0.5), inset 0 0 8px rgba(255, 0, 110, 0.2);
+                    transform: translateY(-50%) scale(1);
+                }
+                50% { 
+                    box-shadow: 0 0 25px rgba(255, 0, 110, 0.8), inset 0 0 12px rgba(255, 0, 110, 0.3);
+                    transform: translateY(-50%) scale(1.05);
                 }
             }
             
-            #torn-mission-badge.mission-urgent {
-                background: #e74c3c;
-                animation: mission-pulse 2s infinite;
+            /* Mobile Override - Compact Neon */
+            @media (max-width: 768px) {
+                #torn-mission-badge {
+                    right: 6px;
+                    top: 6px;
+                    transform: none;
+                    width: 16px;
+                    height: 16px;
+                    font-size: 9px;
+                    border-radius: 3px;
+                }
+                #torn-mission-badge.mission-urgent {
+                    animation: neon-pulse-mobile 1.5s ease-in-out infinite;
+                }
+                @keyframes neon-pulse-mobile {
+                    0%, 100% { box-shadow: 0 0 10px rgba(255, 0, 110, 0.5); transform: scale(1); }
+                    50% { box-shadow: 0 0 18px rgba(255, 0, 110, 0.8); transform: scale(1.05); }
+                }
             }
             
-            #torn-mission-badge.mission-warning {
-                background: #f39c12;
+            /* ═══════════════════════════════════════════════════════════ */
+            /* SETTINGS MODAL - Cyberpunk Terminal                          */
+            /* ═══════════════════════════════════════════════════════════ */
+            
+            #mission-tracker-settings {
+                font-family: 'Segoe UI', Tahoma, sans-serif;
             }
             
-            @keyframes mission-pulse {
-                0%, 100% { transform: scale(1); }
-                50% { transform: scale(1.15); }
+            #mission-modal-overlay {
+                background: rgba(10, 10, 15, 0.95) !important;
+                backdrop-filter: blur(5px);
+            }
+            
+            #mission-tracker-settings > div > div {
+                background: ${NEON.panel} !important;
+                border: 1px solid ${NEON.border} !important;
+                border-radius: 8px !important;
+                box-shadow: 0 0 30px rgba(131, 56, 236, 0.3), 0 10px 40px rgba(0,0,0,0.5) !important;
+            }
+            
+            #mission-tracker-settings h3 {
+                color: ${NEON.cyan} !important;
+                font-family: 'Courier New', monospace !important;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+                text-shadow: 0 0 10px ${NEON.cyan};
+                border-bottom: 1px solid ${NEON.border};
+                padding-bottom: 12px;
+            }
+            
+            #mission-tracker-settings label {
+                color: ${NEON.textDim} !important;
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+            
+            #api-key-input {
+                background: ${NEON.dark} !important;
+                border: 1px solid ${NEON.border} !important;
+                color: ${NEON.cyan} !important;
+                font-family: 'Courier New', monospace !important;
+                border-radius: 4px !important;
+                box-shadow: inset 0 2px 4px rgba(0,0,0,0.5) !important;
+            }
+            
+            #api-key-input:focus {
+                border-color: ${NEON.cyan} !important;
+                box-shadow: 0 0 10px rgba(0, 245, 212, 0.3), inset 0 2px 4px rgba(0,0,0,0.5) !important;
+                outline: none !important;
+            }
+            
+            /* Info Panels */
+            #mission-tracker-settings [style*="background: #16213e"] {
+                background: ${NEON.dark} !important;
+                border: 1px solid ${NEON.border} !important;
+                border-radius: 6px !important;
+                box-shadow: inset 0 1px 3px rgba(0,0,0,0.5) !important;
+            }
+            
+            #mission-tracker-settings [style*="color: #888"] {
+                color: ${NEON.textDim} !important;
+            }
+            
+            #mission-tracker-settings [style*="color: #fff"] {
+                color: ${NEON.text} !important;
+            }
+            
+            /* Links */
+            #mission-tracker-settings a[href*="torn.com"] {
+                color: ${NEON.cyan} !important;
+                text-decoration: none !important;
+                border-bottom: 1px dashed ${NEON.cyan};
+                transition: all 0.2s;
+            }
+            
+            #mission-tracker-settings a[href*="torn.com"]:hover {
+                color: ${NEON.pink} !important;
+                border-bottom-color: ${NEON.pink};
+                text-shadow: 0 0 8px ${NEON.pink};
+            }
+            
+            /* Buttons - Neon Glow */
+            #save-mission-settings {
+                background: linear-gradient(135deg, ${NEON.pink}, #d9005c) !important;
+                border: none !important;
+                border-radius: 4px !important;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                font-weight: 700 !important;
+                box-shadow: 0 4px 15px rgba(255, 0, 110, 0.4) !important;
+                transition: all 0.2s !important;
+            }
+            
+            #save-mission-settings:hover {
+                box-shadow: 0 6px 20px rgba(255, 0, 110, 0.6) !important;
+                transform: translateY(-1px);
+            }
+            
+            #cancel-mission-settings {
+                background: ${NEON.dark} !important;
+                border: 1px solid ${NEON.border} !important;
+                color: ${NEON.textDim} !important;
+                border-radius: 4px !important;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                transition: all 0.2s !important;
+            }
+            
+            #cancel-mission-settings:hover {
+                border-color: ${NEON.cyan} !important;
+                color: ${NEON.cyan} !important;
+                box-shadow: 0 0 10px rgba(0, 245, 212, 0.3) !important;
+            }
+            
+            /* Code Tags */
+            #mission-tracker-settings code {
+                background: ${NEON.dark} !important;
+                border: 1px solid ${NEON.border} !important;
+                color: ${NEON.cyan} !important;
+                font-family: 'Courier New', monospace !important;
+                border-radius: 3px !important;
+                padding: 2px 6px !important;
+            }
+            
+            /* Error Messages */
+            #mission-tracker-settings [style*="color: #e74c3c"] {
+                color: ${NEON.pink} !important;
+                text-shadow: 0 0 5px rgba(255, 0, 110, 0.5);
+            }
+            
+            /* Success/Green text override */
+            #mission-tracker-settings span[style*="color: #2ecc71"] {
+                color: ${NEON.cyan} !important;
+                text-shadow: 0 0 5px rgba(0, 245, 212, 0.5);
             }
         `);
     }
 
-    function updateBubble(status) {
-        if (!bubbleElement) createBubble();
-        if (!bubbleElement) return;
+    // ═══════════════════════════════════════════════════════════
+    // UI COMPONENTS
+    // ═══════════════════════════════════════════════════════════
+    function createBadge() {
+        if (badgeElement) return;
 
-        addStyles();
+        const missionsNav = document.getElementById('nav-missions');
+        if (!missionsNav) return;
 
-        if (status.count === 0) {
-            bubbleElement.style.display = 'none';
-            return;
-        }
+        badgeElement = document.createElement('span');
+        badgeElement.id = 'torn-mission-badge';
 
-        bubbleElement.style.display = 'inline-flex';
-        bubbleElement.textContent = status.count;
-        bubbleElement.title = `${status.count} incomplete mission${status.count !== 1 ? 's' : ''}`;
-
-        // Remove old classes
-        bubbleElement.classList.remove('mission-urgent', 'mission-warning');
-
-        // Add appropriate class
-        if (status.urgent) {
-            bubbleElement.classList.add('mission-urgent');
-        } else if (status.warning) {
-            bubbleElement.classList.add('mission-warning');
+        const areaRow = missionsNav.querySelector('.area-row___iBD8N');
+        if (areaRow) {
+            areaRow.appendChild(badgeElement);
         }
     }
 
+    function updateBadge(status) {
+        if (!badgeElement) createBadge();
+        if (!badgeElement) return;
+
+        injectStyles();
+
+        if (status.count === 0) {
+            badgeElement.style.display = 'none';
+            return;
+        }
+
+        badgeElement.style.display = 'inline-flex';
+        badgeElement.textContent = status.count;
+        badgeElement.title = `[🦝] ${status.count} mission${status.count !== 1 ? 's' : ''} pending`;
+
+        badgeElement.classList.remove('mission-urgent', 'mission-warning');
+
+        if (status.urgent) {
+            badgeElement.classList.add('mission-urgent');
+        } else if (status.warning) {
+            badgeElement.classList.add('mission-warning');
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // MUTATION OBSERVER
+    // ═══════════════════════════════════════════════════════════
+    function setupMutationObserver() {
+        const observer = new MutationObserver(() => {
+            const existingBadge = document.getElementById('torn-mission-badge');
+            const missionsNav = document.getElementById('nav-missions');
+
+            if (!existingBadge || (missionsNav && !missionsNav.querySelector('.area-row___iBD8N #torn-mission-badge'))) {
+                if (existingBadge) existingBadge.remove();
+                badgeElement = null;
+                createBadge();
+                const cached = Storage.getCache('missions');
+                if (cached) {
+                    const status = processMissions(cached);
+                    updateBadge(status);
+                }
+            }
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // SETTINGS MODAL
+    // ═══════════════════════════════════════════════════════════
     async function showSettings() {
         const existing = document.getElementById('mission-tracker-settings');
         if (existing) existing.remove();
@@ -308,35 +493,38 @@
                 const access = info.access || {};
                 const userSelections = Array.isArray(info.selections?.user) ? info.selections.user : [];
 
-                // Check if this is a custom key (has user selections)
                 const isCustomKey = userSelections.length > 0;
-                
-                // Build selections list with missions highlighted in green
                 const selectionsHtml = isCustomKey ? userSelections.map(sel => {
                     const isMissions = sel === 'missions';
-                    return `<span style="color: ${isMissions ? '#2ecc71' : '#aaa'}; ${isMissions ? 'font-weight: bold;' : ''}">${sel}</span>`;
+                    return `<span style="color: ${isMissions ? '#00f5d4' : '#6b6b8a'}; ${isMissions ? 'font-weight: bold; text-shadow: 0 0 5px rgba(0,245,212,0.5);' : ''}">${sel}</span>`;
                 }).join(', ') : '';
-                
+
                 keyInfoHtml = `
                     <div style="
-                        background: #16213e;
-                        border: 1px solid #0f3460;
-                        border-radius: 5px;
+                        background: #0a0a0f;
+                        border: 1px solid #1e1e2e;
+                        border-radius: 6px;
                         padding: 12px;
                         margin: 15px 0;
                         font-size: 12px;
+                        box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
                     ">
-                        <div style="color: #888; margin-bottom: 5px;"><strong>Current API Key Info:</strong></div>
-                        <div style="color: #fff;">Access Type: <span style="color: #2ecc71;">${access.type || 'Unknown'}</span></div>
-                        <div style="color: #fff;">Access Level: <span style="color: #2ecc71;">${access.level ?? 'Unknown'}</span></div>
+                        <div style="color: #6b6b8a; margin-bottom: 8px; font-family: 'Courier New', monospace; text-transform: uppercase; letter-spacing: 1px;"><strong>› System Status</strong></div>
+                        <div style="color: #e0e0e0; margin-bottom: 5px;">
+                            <span style="color: #6b6b8a;">Access Type:</span> <span style="color: #00f5d4; text-shadow: 0 0 5px rgba(0,245,212,0.5);">${access.type || 'Unknown'}</span>
+                        </div>
+                        <div style="color: #e0e0e0; margin-bottom: 5px;">
+                            <span style="color: #6b6b8a;">Access Level:</span> <span style="color: #00f5d4; text-shadow: 0 0 5px rgba(0,245,212,0.5);">${access.level ?? 'Unknown'}</span>
+                        </div>
                         ${isCustomKey ? `
-                            <div style="color: #888; margin-top: 8px; font-size: 11px;">
-                                Custom selections: ${selectionsHtml}
+                            <div style="color: #6b6b8a; margin-top: 10px; font-size: 11px; font-family: 'Courier New', monospace;">
+                                <span style="text-transform: uppercase; letter-spacing: 1px;">› Active Modules</span><br>
+                                ${selectionsHtml}
                             </div>
                         ` : ''}
                         ${!userSelections.includes('missions') ? `
-                            <div style="color: #e74c3c; margin-top: 8px; font-size: 11px;">
-                                ⚠️ This key does not include the <code>missions</code> selection. Create a new key with the button above.
+                            <div style="color: #ff006e; margin-top: 10px; font-size: 11px; font-family: 'Courier New', monospace; text-shadow: 0 0 5px rgba(255,0,110,0.5);">
+                                ⚠ CRITICAL: <code>missions</code> module not detected
                             </div>
                         ` : ''}
                     </div>
@@ -344,15 +532,17 @@
             } catch (e) {
                 keyInfoHtml = `
                     <div style="
-                        background: #16213e;
-                        border: 1px solid #e74c3c;
-                        border-radius: 5px;
+                        background: #0a0a0f;
+                        border: 1px solid #ff006e;
+                        border-radius: 6px;
                         padding: 12px;
                         margin: 15px 0;
                         font-size: 12px;
-                        color: #e74c3c;
+                        color: #ff006e;
+                        font-family: 'Courier New', monospace;
+                        text-shadow: 0 0 5px rgba(255,0,110,0.5);
                     ">
-                        Unable to verify API key: ${e.message}
+                        ⚠ CONNECTION ERROR: ${e.message}
                     </div>
                 `;
             }
@@ -364,94 +554,61 @@
             <div id="mission-modal-overlay" style="
                 position: fixed;
                 top: 0; left: 0; right: 0; bottom: 0;
-                background: rgba(0,0,0,0.8);
                 z-index: 10000;
                 display: flex;
                 align-items: center;
                 justify-content: center;
             ">
                 <div style="
-                    background: #1a1a2e;
-                    border: 2px solid #e94560;
-                    border-radius: 10px;
                     padding: 25px;
                     width: 420px;
                     max-width: 90%;
-                    color: #fff;
-                    font-family: 'Segoe UI', Tahoma, sans-serif;
                 ">
-                    <h3 style="margin-top: 0; color: #e94560;">⚙️ Mission Tracker Settings</h3>
+                    <h3 style="margin-top: 0;">⚙️ Mission Tracker // v3.0.0</h3>
 
-                    <label style="display: block; margin: 15px 0 5px; color: #ccc;">
-                        Torn API Key:
+                    <label style="display: block; margin: 15px 0 5px;">
+                        › API Key
                     </label>
                     <input type="password" id="api-key-input"
                            value="${apiKey}"
-                           placeholder="Enter your Torn API key"
+                           placeholder="ENTER_API_KEY..."
                            style="
                                width: 100%;
                                padding: 10px;
-                               border: 1px solid #0f3460;
-                               background: #16213e;
-                               color: #fff;
-                               border-radius: 5px;
                                box-sizing: border-box;
-                               font-family: monospace;
                            ">
 
                     <div style="
-                        background: #16213e;
-                        border: 1px solid #0f3460;
-                        border-radius: 5px;
                         padding: 12px;
                         margin: 12px 0;
                         font-size: 11px;
                     ">
-                        <div style="color: #888; margin-bottom: 8px;"><strong>🔑 Required API Key Permissions:</strong></div>
-                        <div style="color: #fff; margin-bottom: 5px;">
-                            <strong>Access Level:</strong> <span style="color: #2ecc71;">Limited</span> or higher
+                        <div style="margin-bottom: 8px; font-family: 'Courier New', monospace; text-transform: uppercase; letter-spacing: 1px;"><strong>› Required Permissions</strong></div>
+                        <div style="margin-bottom: 5px;">
+                            <span style="color: #6b6b8a;">Access Level:</span> <span style="color: #00f5d4;">Limited</span>+
                         </div>
-                        <div style="color: #fff; margin-bottom: 8px;">
-                            <strong>Required Selection:</strong> <code style="background: #0f3460; padding: 2px 4px; border-radius: 3px;">missions</code>
+                        <div style="margin-bottom: 10px;">
+                            <span style="color: #6b6b8a;">Required Module:</span> <code>missions</code>
                         </div>
                         <a href="https://www.torn.com/preferences.php#tab=api?step=addNewKey&title=MissionTracker&user=missions" target="_blank" style="
                             display: inline-block;
-                            background: #0f3460;
-                            color: #3498db;
-                            padding: 6px 12px;
-                            border-radius: 4px;
-                            text-decoration: none;
-                            font-weight: bold;
-                        ">→ Click to Create Key</a>
+                            padding: 8px 16px;
+                            font-family: 'Courier New', monospace;
+                            font-size: 10px;
+                            text-transform: uppercase;
+                            letter-spacing: 1px;
+                        ">[ Initialize New Key ]</a>
                     </div>
 
                     ${keyInfoHtml}
 
                     <div style="margin-top: 20px; display: flex; gap: 10px;">
-                        <button id="save-mission-settings" style="
-                            flex: 1;
-                            padding: 10px;
-                            border: none;
-                            border-radius: 5px;
-                            background: #e94560;
-                            color: white;
-                            font-weight: bold;
-                            cursor: pointer;
-                        ">Save</button>
-                        <button id="cancel-mission-settings" style="
-                            flex: 1;
-                            padding: 10px;
-                            border: none;
-                            border-radius: 5px;
-                            background: #0f3460;
-                            color: white;
-                            font-weight: bold;
-                            cursor: pointer;
-                        ">Cancel</button>
+                        <button id="save-mission-settings" style="flex: 1; padding: 12px;">Execute</button>
+                        <button id="cancel-mission-settings" style="flex: 1; padding: 12px;">Abort</button>
                     </div>
 
-                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #333; font-size: 11px; color: #666;">
-                        <strong>Privacy:</strong> Your API key is stored locally. No data is sent to external servers.
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #1e1e2e; font-size: 10px; color: #6b6b8a; font-family: 'Courier New', monospace;">
+                        [🔒] Key stored locally // No external telemetry
                     </div>
                 </div>
             </div>
@@ -475,25 +632,28 @@
         };
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // MAIN
+    // ═══════════════════════════════════════════════════════════
     async function refreshMissions(force = false) {
         try {
             if (force) Storage.clearCache();
             const missions = await TornAPI.fetchMissions();
             const status = processMissions(missions);
-            updateBubble(status);
-            console.log('[Mission Tracker]', status);
+            updateBadge(status);
+            console.log('[🦝 Mission Tracker]', status);
         } catch (error) {
-            console.error('[Mission Tracker] Error:', error.message);
+            console.error('[🦝 Mission Tracker] Error:', error.message);
         }
     }
 
     function init() {
         const apiKey = Storage.getKey();
         if (!apiKey) {
-            console.log('[Mission Tracker] No API key configured. Open settings to set up.');
+            console.log('[🦝 Mission Tracker] No API key. Awaiting initialization...');
             if (!GM_getValue('mission_tracker_notified', false)) {
                 setTimeout(() => {
-                    if (confirm('Mission Tracker: No API key configured. Open settings now?')) {
+                    if (confirm('[🦝 Mission Tracker] No API key detected. Open settings?')) {
                         showSettings();
                     }
                     GM_setValue('mission_tracker_notified', true);
@@ -509,14 +669,14 @@
 
         setupMutationObserver();
 
-        console.log('[Mission Tracker] Initialized with Torn API v2.');
+        console.log('[🦝 Mission Tracker] System online. Running Mission Tracker v3.0.0');
     }
 
-    GM_registerMenuCommand('⚙️ Mission Tracker Settings', showSettings);
-    GM_registerMenuCommand('🔄 Refresh Now', () => refreshMissions(true));
-    GM_registerMenuCommand('🗑️ Clear Cache', () => {
+    GM_registerMenuCommand('[🦝] System Settings', showSettings);
+    GM_registerMenuCommand('[🦝] Force Refresh', () => refreshMissions(true));
+    GM_registerMenuCommand('[🦝] Purge Cache', () => {
         Storage.clearCache();
-        alert('Cache cleared! Refresh to get latest mission data.');
+        alert('[🦝] Cache purged.');
     });
 
     if (document.readyState === 'loading') {
