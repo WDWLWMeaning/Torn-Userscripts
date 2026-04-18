@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Mission Tracker
 // @namespace    torn-mission-tracker
-// @version      2.0.6
+// @version      2.0.7
 // @description  Track Torn missions with urgency indicators (red <24h, yellow <48h) via the Torn API v2
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -388,10 +388,29 @@
                                font-family: monospace;
                            ">
 
-                    <p style="font-size: 11px; color: #888; margin-top: 5px;">
-                        Find your API key at: <a href="https://www.torn.com/preferences.php#tab=api" target="_blank" style="color: #3498db;">torn.com/preferences.php#tab=api</a><br>
-                        <strong>Required for v2:</strong> the key must include the <code>missions</code> user selection.
-                    </p>
+                    <div style="
+                        background: #16213e;
+                        border: 1px solid #0f3460;
+                        border-radius: 5px;
+                        padding: 12px;
+                        margin: 12px 0;
+                        font-size: 11px;
+                    ">
+                        <div style="color: #888; margin-bottom: 8px;"><strong>🔑 Required API Key Permissions:</strong></div>
+                        <div style="color: #fff; margin-bottom: 5px;">
+                            <strong>Access Level:</strong> <span style="color: #2ecc71;">Limited</span> or higher
+                        </div>
+                        <div style="color: #fff; margin-bottom: 5px;">
+                            <strong>Required Selection:</strong> <code style="background: #0f3460; padding: 2px 4px; border-radius: 3px;">missions</code>
+                        </div>
+                        <div style="color: #aaa; margin-top: 8px;">
+                            💡 <strong>Tip:</strong> Create a custom key named "MissionTracker" with only the 
+                            <code>missions</code> selection for better security.
+                        </div>
+                        <div style="margin-top: 8px;">
+                            <a href="https://www.torn.com/preferences.php#tab=api" target="_blank" style="color: #3498db;">→ Create/Edit API Keys</a>
+                        </div>
+                    </div>
 
                     ${keyInfoHtml}
 
