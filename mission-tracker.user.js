@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         Torn Mission Tracker
 // @namespace    torn-mission-tracker
-// @version      3.0.0
-// @description  Track Torn missions with cyberpunk neon styling. Red alert for <24h, yellow for <48h.
-// @author       Kevin (🦝)
+// @version      3.1.0
+// @description  Track Torn missions with steampunk brass & leather styling. Red alert for <24h, yellow for <48h.
+// @author       Kevin (🦝⚙️)
 // @match        https://www.torn.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
@@ -18,53 +18,54 @@
 // ==/UserScript==
 
 /**
- * ╔══════════════════════════════════════════════════════════╗
- * ║  🦝 KEvin's Cyberpunk Mission Tracker v3.0.0              ║
- * ║  Neon-lit mission tracking for the shadows of Torn City   ║
- * ╚══════════════════════════════════════════════════════════╝
+ * ┌─────────────────────────────────────────────────────────┐
+ * │  🦝⚙️ Kevin's Steampunk Mission Tracker v3.1.0          │
+ * │  Brass gears & leather-bound mission tracking          │
+ * │  for the distinguished Torn gentleman/lady              │
+ * └─────────────────────────────────────────────────────────┘
  * 
- * Theme: Cyberpunk Raccoon
- * - Dark terminal aesthetic with neon accents
- * - Hot pink (#ff006e) for urgent alerts
- * - Cyan (#00f5d4) for system info
- * - Purple (#8338ec) for depth
- * - Monospace fonts, glowing effects, sharp edges
+ * Theme: Steampunk Raccoon
+ * - Victorian industrial brass and leather aesthetic
+ * - Warm brass (#b8860b) for accents
+ * - Dark leather (#3d2817) backgrounds
+ * - Copper (#b87333) and bronze (#cd7f32) details
+ * - Sepia tones, serif fonts, ornate borders
  */
 
 (function() {
     'use strict';
 
-    // ═══════════════════════════════════════════════════════════
+    // ─────────────────────────────────────────────────────────
     // CONFIGURATION
-    // ═══════════════════════════════════════════════════════════
+    // ─────────────────────────────────────────────────────────
     const CONFIG = {
         apiBaseUrl: 'https://api.torn.com/v2',
-        updateInterval: 5 * 60 * 1000, // 5 minutes
+        updateInterval: 5 * 60 * 1000,
         cacheTtlMinutes: 5,
         urgentHours: 24,
         warningHours: 48,
-        requestComment: 'cyberpunk-mission-tracker-v3'
+        requestComment: 'steampunk-mission-tracker-v3'
     };
 
-    // Cyberpunk color palette
-    const NEON = {
-        pink: '#ff006e',
-        cyan: '#00f5d4',
-        purple: '#8338ec',
-        yellow: '#ffbe0b',
-        dark: '#0a0a0f',
-        panel: '#12121a',
-        border: '#1e1e2e',
-        text: '#e0e0e0',
-        textDim: '#6b6b8a'
+    // Steampunk color palette
+    const BRASS = {
+        primary: '#b8860b',
+        copper: '#b87333',
+        bronze: '#cd7f32',
+        leather: '#3d2817',
+        sepia: '#704214',
+        steam: '#e8dcc4',
+        coal: '#1a1410',
+        rust: '#8b4513',
+        gold: '#daa520'
     };
 
     let badgeElement = null;
     let updateTimer = null;
 
-    // ═══════════════════════════════════════════════════════════
+    // ─────────────────────────────────────────────────────────
     // STORAGE
-    // ═══════════════════════════════════════════════════════════
+    // ─────────────────────────────────────────────────────────
     const Storage = {
         getKey: () => GM_getValue('torn_api_key', ''),
         setKey: (key) => GM_setValue('torn_api_key', key),
@@ -87,9 +88,9 @@
         }
     };
 
-    // ═══════════════════════════════════════════════════════════
+    // ─────────────────────────────────────────────────────────
     // API CLIENT
-    // ═══════════════════════════════════════════════════════════
+    // ─────────────────────────────────────────────────────────
     function buildApiUrl(path, query = {}) {
         const url = new URL(`${CONFIG.apiBaseUrl}${path}`);
         const key = Storage.getKey();
@@ -145,13 +146,13 @@
         }
     };
 
-    // ═══════════════════════════════════════════════════════════
+    // ─────────────────────────────────────────────────────────
     // MISSION PROCESSING
-    // ═══════════════════════════════════════════════════════════
+    // ─────────────────────────────────────────────────────────
     function processMissions(missionsPayload) {
         const givers = missionsPayload?.givers;
         if (!Array.isArray(givers)) {
-            console.log('[🦝 Mission Tracker] No mission giver data found');
+            console.log('[🦝⚙️ Mission Tracker] No mission giver data found');
             return { count: 0, urgent: false, warning: false };
         }
 
@@ -188,18 +189,18 @@
         };
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // STYLES - Cyberpunk Raccoon Theme
-    // ═══════════════════════════════════════════════════════════
+    // ─────────────────────────────────────────────────────────
+    // STYLES - Steampunk Raccoon Theme
+    // ─────────────────────────────────────────────────────────
     function injectStyles() {
-        if (document.getElementById('kevin-cyberpunk-styles')) return;
+        if (document.getElementById('kevin-steampunk-styles')) return;
 
         GM_addStyle(`
-            /* ═══════════════════════════════════════════════════════════ */
-            /* 🦝 CYBERPUNK RACCOON THEME v3.0                              */
-            /* ═══════════════════════════════════════════════════════════ */
+            /* ───────────────────────────────────────────────────────── */
+            /* 🦝⚙️ STEAMPUNK RACCOON THEME v3.1                          */
+            /* ───────────────────────────────────────────────────────── */
             
-            /* Mission Badge - Neon Core */
+            /* Mission Badge - Brass Gear */
             #torn-mission-badge {
                 position: absolute;
                 right: 12px;
@@ -208,213 +209,215 @@
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                width: 20px;
-                height: 20px;
-                background: ${NEON.dark};
-                color: ${NEON.cyan};
-                border: 1px solid ${NEON.cyan};
-                border-radius: 4px;
+                width: 22px;
+                height: 22px;
+                background: linear-gradient(145deg, ${BRASS.leather}, ${BRASS.coal});
+                color: ${BRASS.steam};
+                border: 2px solid ${BRASS.primary};
+                border-radius: 50%;
                 font-size: 11px;
                 font-weight: 700;
-                font-family: 'Courier New', 'Consolas', monospace;
-                text-shadow: 0 0 5px ${NEON.cyan};
-                box-shadow: 0 0 10px rgba(0, 245, 212, 0.3), inset 0 0 5px rgba(0, 245, 212, 0.1);
+                font-family: Georgia, 'Times New Roman', serif;
+                text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+                box-shadow: 
+                    0 2px 4px rgba(0,0,0,0.5),
+                    inset 0 1px 2px rgba(184, 134, 11, 0.3);
                 pointer-events: none;
                 user-select: none;
-                letter-spacing: 0.5px;
             }
             
-            /* Urgent - Hot Pink Neon */
+            /* Urgent - Rusted Brass */
             #torn-mission-badge.mission-urgent {
-                color: ${NEON.pink};
-                border-color: ${NEON.pink};
-                text-shadow: 0 0 8px ${NEON.pink}, 0 0 15px ${NEON.pink};
-                box-shadow: 0 0 15px rgba(255, 0, 110, 0.5), inset 0 0 8px rgba(255, 0, 110, 0.2);
-                animation: neon-pulse 1.5s ease-in-out infinite;
+                color: ${BRASS.steam};
+                border-color: ${BRASS.rust};
+                background: linear-gradient(145deg, #5a1a0a, ${BRASS.coal});
+                box-shadow: 
+                    0 0 10px rgba(139, 69, 19, 0.6),
+                    inset 0 1px 2px rgba(139, 69, 19, 0.4);
+                animation: gear-tick 2s ease-in-out infinite;
             }
             
-            /* Warning - Yellow Neon */
+            /* Warning - Aged Copper */
             #torn-mission-badge.mission-warning {
-                color: ${NEON.yellow};
-                border-color: ${NEON.yellow};
-                text-shadow: 0 0 5px ${NEON.yellow};
-                box-shadow: 0 0 10px rgba(255, 190, 11, 0.4), inset 0 0 5px rgba(255, 190, 11, 0.1);
+                color: ${BRASS.steam};
+                border-color: ${BRASS.copper};
+                background: linear-gradient(145deg, ${BRASS.sepia}, ${BRASS.coal});
+                box-shadow: 
+                    0 2px 6px rgba(184, 115, 51, 0.4),
+                    inset 0 1px 2px rgba(184, 115, 51, 0.2);
             }
             
-            /* Neon Pulse Animation */
-            @keyframes neon-pulse {
-                0%, 100% { 
-                    box-shadow: 0 0 15px rgba(255, 0, 110, 0.5), inset 0 0 8px rgba(255, 0, 110, 0.2);
-                    transform: translateY(-50%) scale(1);
-                }
-                50% { 
-                    box-shadow: 0 0 25px rgba(255, 0, 110, 0.8), inset 0 0 12px rgba(255, 0, 110, 0.3);
-                    transform: translateY(-50%) scale(1.05);
-                }
+            /* Gear Tick Animation */
+            @keyframes gear-tick {
+                0%, 100% { transform: translateY(-50%) rotate(0deg); }
+                25% { transform: translateY(-50%) rotate(2deg); }
+                75% { transform: translateY(-50%) rotate(-2deg); }
             }
             
-            /* Mobile Override - Compact Neon */
+            /* Mobile Override - Compact Brass */
             @media (max-width: 768px) {
                 #torn-mission-badge {
-                    right: 6px;
-                    top: 6px;
+                    right: 4px;
+                    top: 4px;
                     transform: none;
-                    width: 16px;
-                    height: 16px;
+                    width: 18px;
+                    height: 18px;
                     font-size: 9px;
-                    border-radius: 3px;
+                    border-width: 1px;
                 }
                 #torn-mission-badge.mission-urgent {
-                    animation: neon-pulse-mobile 1.5s ease-in-out infinite;
+                    animation: gear-tick-mobile 2s ease-in-out infinite;
                 }
-                @keyframes neon-pulse-mobile {
-                    0%, 100% { box-shadow: 0 0 10px rgba(255, 0, 110, 0.5); transform: scale(1); }
-                    50% { box-shadow: 0 0 18px rgba(255, 0, 110, 0.8); transform: scale(1.05); }
+                @keyframes gear-tick-mobile {
+                    0%, 100% { transform: rotate(0deg); }
+                    25% { transform: rotate(2deg); }
+                    75% { transform: rotate(-2deg); }
                 }
             }
             
-            /* ═══════════════════════════════════════════════════════════ */
-            /* SETTINGS MODAL - Cyberpunk Terminal                          */
-            /* ═══════════════════════════════════════════════════════════ */
+            /* ───────────────────────────────────────────────────────── */
+            /* SETTINGS MODAL - Victorian Leather Journal                  */
+            /* ───────────────────────────────────────────────────────── */
             
             #mission-tracker-settings {
-                font-family: 'Segoe UI', Tahoma, sans-serif;
+                font-family: Georgia, 'Times New Roman', serif;
             }
             
             #mission-modal-overlay {
-                background: rgba(10, 10, 15, 0.95) !important;
-                backdrop-filter: blur(5px);
+                background: rgba(26, 20, 16, 0.95) !important;
             }
             
             #mission-tracker-settings > div > div {
-                background: ${NEON.panel} !important;
-                border: 1px solid ${NEON.border} !important;
+                background: linear-gradient(145deg, ${BRASS.leather}, ${BRASS.coal}) !important;
+                border: 3px solid ${BRASS.primary} !important;
                 border-radius: 8px !important;
-                box-shadow: 0 0 30px rgba(131, 56, 236, 0.3), 0 10px 40px rgba(0,0,0,0.5) !important;
+                box-shadow: 
+                    0 8px 32px rgba(0,0,0,0.6),
+                    inset 0 1px 1px rgba(184, 134, 11, 0.2) !important;
             }
             
             #mission-tracker-settings h3 {
-                color: ${NEON.cyan} !important;
-                font-family: 'Courier New', monospace !important;
-                text-transform: uppercase;
-                letter-spacing: 2px;
-                text-shadow: 0 0 10px ${NEON.cyan};
-                border-bottom: 1px solid ${NEON.border};
+                color: ${BRASS.primary} !important;
+                font-family: Georgia, serif !important;
+                font-style: italic;
+                letter-spacing: 1px;
+                text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+                border-bottom: 2px solid ${BRASS.copper};
                 padding-bottom: 12px;
             }
             
             #mission-tracker-settings label {
-                color: ${NEON.textDim} !important;
-                font-size: 11px;
-                text-transform: uppercase;
-                letter-spacing: 1px;
+                color: ${BRASS.steam} !important;
+                font-size: 12px;
+                font-style: italic;
+                letter-spacing: 0.5px;
             }
             
             #api-key-input {
-                background: ${NEON.dark} !important;
-                border: 1px solid ${NEON.border} !important;
-                color: ${NEON.cyan} !important;
+                background: ${BRASS.coal} !important;
+                border: 2px solid ${BRASS.copper} !important;
+                color: ${BRASS.steam} !important;
                 font-family: 'Courier New', monospace !important;
                 border-radius: 4px !important;
                 box-shadow: inset 0 2px 4px rgba(0,0,0,0.5) !important;
             }
             
             #api-key-input:focus {
-                border-color: ${NEON.cyan} !important;
-                box-shadow: 0 0 10px rgba(0, 245, 212, 0.3), inset 0 2px 4px rgba(0,0,0,0.5) !important;
+                border-color: ${BRASS.primary} !important;
+                box-shadow: 0 0 8px rgba(184, 134, 11, 0.4), inset 0 2px 4px rgba(0,0,0,0.5) !important;
                 outline: none !important;
             }
             
-            /* Info Panels */
-            #mission-tracker-settings [style*="background: #16213e"] {
-                background: ${NEON.dark} !important;
-                border: 1px solid ${NEON.border} !important;
+            /* Info Panels - Aged Paper */
+            #mission-tracker-settings [style*="background: #0a0a0f"] {
+                background: ${BRASS.coal} !important;
+                border: 2px solid ${BRASS.sepia} !important;
                 border-radius: 6px !important;
                 box-shadow: inset 0 1px 3px rgba(0,0,0,0.5) !important;
             }
             
             #mission-tracker-settings [style*="color: #888"] {
-                color: ${NEON.textDim} !important;
+                color: ${BRASS.copper} !important;
             }
             
             #mission-tracker-settings [style*="color: #fff"] {
-                color: ${NEON.text} !important;
+                color: ${BRASS.steam} !important;
             }
             
-            /* Links */
+            /* Links - Brass Rivets */
             #mission-tracker-settings a[href*="torn.com"] {
-                color: ${NEON.cyan} !important;
+                color: ${BRASS.primary} !important;
                 text-decoration: none !important;
-                border-bottom: 1px dashed ${NEON.cyan};
+                border-bottom: 1px dashed ${BRASS.copper};
                 transition: all 0.2s;
             }
             
             #mission-tracker-settings a[href*="torn.com"]:hover {
-                color: ${NEON.pink} !important;
-                border-bottom-color: ${NEON.pink};
-                text-shadow: 0 0 8px ${NEON.pink};
+                color: ${BRASS.gold} !important;
+                border-bottom-color: ${BRASS.gold};
             }
             
-            /* Buttons - Neon Glow */
+            /* Buttons - Brass Machinery */
             #save-mission-settings {
-                background: linear-gradient(135deg, ${NEON.pink}, #d9005c) !important;
-                border: none !important;
+                background: linear-gradient(145deg, ${BRASS.primary}, ${BRASS.bronze}) !important;
+                border: 2px solid ${BRASS.gold} !important;
+                color: ${BRASS.coal} !important;
                 border-radius: 4px !important;
-                text-transform: uppercase;
-                letter-spacing: 1px;
+                font-family: Georgia, serif !important;
                 font-weight: 700 !important;
-                box-shadow: 0 4px 15px rgba(255, 0, 110, 0.4) !important;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.4) !important;
                 transition: all 0.2s !important;
             }
             
             #save-mission-settings:hover {
-                box-shadow: 0 6px 20px rgba(255, 0, 110, 0.6) !important;
+                background: linear-gradient(145deg, ${BRASS.gold}, ${BRASS.primary}) !important;
+                box-shadow: 0 6px 12px rgba(184, 134, 11, 0.4) !important;
                 transform: translateY(-1px);
             }
             
             #cancel-mission-settings {
-                background: ${NEON.dark} !important;
-                border: 1px solid ${NEON.border} !important;
-                color: ${NEON.textDim} !important;
+                background: ${BRASS.coal} !important;
+                border: 2px solid ${BRASS.copper} !important;
+                color: ${BRASS.steam} !important;
                 border-radius: 4px !important;
-                text-transform: uppercase;
-                letter-spacing: 1px;
+                font-family: Georgia, serif !important;
                 transition: all 0.2s !important;
             }
             
             #cancel-mission-settings:hover {
-                border-color: ${NEON.cyan} !important;
-                color: ${NEON.cyan} !important;
-                box-shadow: 0 0 10px rgba(0, 245, 212, 0.3) !important;
+                border-color: ${BRASS.primary} !important;
+                color: ${BRASS.primary} !important;
+                box-shadow: 0 0 8px rgba(184, 134, 11, 0.3) !important;
             }
             
-            /* Code Tags */
+            /* Code Tags - Typewriter Keys */
             #mission-tracker-settings code {
-                background: ${NEON.dark} !important;
-                border: 1px solid ${NEON.border} !important;
-                color: ${NEON.cyan} !important;
+                background: ${BRASS.coal} !important;
+                border: 1px solid ${BRASS.copper} !important;
+                color: ${BRASS.primary} !important;
                 font-family: 'Courier New', monospace !important;
                 border-radius: 3px !important;
                 padding: 2px 6px !important;
+                box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
             }
             
-            /* Error Messages */
+            /* Error Messages - Rust Warning */
             #mission-tracker-settings [style*="color: #e74c3c"] {
-                color: ${NEON.pink} !important;
-                text-shadow: 0 0 5px rgba(255, 0, 110, 0.5);
+                color: ${BRASS.rust} !important;
+                font-weight: bold;
             }
             
-            /* Success/Green text override */
+            /* Success/Green text override - Brass */
             #mission-tracker-settings span[style*="color: #2ecc71"] {
-                color: ${NEON.cyan} !important;
-                text-shadow: 0 0 5px rgba(0, 245, 212, 0.5);
+                color: ${BRASS.primary} !important;
+                font-weight: bold;
             }
         `);
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // ─────────────────────────────────────────────────────────
     // UI COMPONENTS
-    // ═══════════════════════════════════════════════════════════
+    // ─────────────────────────────────────────────────────────
     function createBadge() {
         if (badgeElement) return;
 
@@ -443,7 +446,7 @@
 
         badgeElement.style.display = 'inline-flex';
         badgeElement.textContent = status.count;
-        badgeElement.title = `[🦝] ${status.count} mission${status.count !== 1 ? 's' : ''} pending`;
+        badgeElement.title = `[🦝⚙️] ${status.count} mission${status.count !== 1 ? 's' : ''} pending`;
 
         badgeElement.classList.remove('mission-urgent', 'mission-warning');
 
@@ -454,9 +457,9 @@
         }
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // ─────────────────────────────────────────────────────────
     // MUTATION OBSERVER
-    // ═══════════════════════════════════════════════════════════
+    // ─────────────────────────────────────────────────────────
     function setupMutationObserver() {
         const observer = new MutationObserver(() => {
             const existingBadge = document.getElementById('torn-mission-badge');
@@ -477,9 +480,9 @@
         observer.observe(document.body, { childList: true, subtree: true });
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // ─────────────────────────────────────────────────────────
     // SETTINGS MODAL
-    // ═══════════════════════════════════════════════════════════
+    // ─────────────────────────────────────────────────────────
     async function showSettings() {
         const existing = document.getElementById('mission-tracker-settings');
         if (existing) existing.remove();
@@ -496,35 +499,35 @@
                 const isCustomKey = userSelections.length > 0;
                 const selectionsHtml = isCustomKey ? userSelections.map(sel => {
                     const isMissions = sel === 'missions';
-                    return `<span style="color: ${isMissions ? '#00f5d4' : '#6b6b8a'}; ${isMissions ? 'font-weight: bold; text-shadow: 0 0 5px rgba(0,245,212,0.5);' : ''}">${sel}</span>`;
+                    return `<span style="color: ${isMissions ? '#b8860b' : '#6b6b6b'}; ${isMissions ? 'font-weight: bold;' : ''}">${sel}</span>`;
                 }).join(', ') : '';
 
                 keyInfoHtml = `
                     <div style="
-                        background: #0a0a0f;
-                        border: 1px solid #1e1e2e;
+                        background: #1a1410;
+                        border: 2px solid #704214;
                         border-radius: 6px;
                         padding: 12px;
                         margin: 15px 0;
                         font-size: 12px;
                         box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
                     ">
-                        <div style="color: #6b6b8a; margin-bottom: 8px; font-family: 'Courier New', monospace; text-transform: uppercase; letter-spacing: 1px;"><strong>› System Status</strong></div>
-                        <div style="color: #e0e0e0; margin-bottom: 5px;">
-                            <span style="color: #6b6b8a;">Access Type:</span> <span style="color: #00f5d4; text-shadow: 0 0 5px rgba(0,245,212,0.5);">${access.type || 'Unknown'}</span>
+                        <div style="color: #b87333; margin-bottom: 8px; font-family: Georgia, serif; font-style: italic;"><strong>Apparatus Status</strong></div>
+                        <div style="color: #e8dcc4; margin-bottom: 5px;">
+                            <span style="color: #b87333;">Access Type:</span> <span style="color: #daa520; font-weight: bold;">${access.type || 'Unknown'}</span>
                         </div>
-                        <div style="color: #e0e0e0; margin-bottom: 5px;">
-                            <span style="color: #6b6b8a;">Access Level:</span> <span style="color: #00f5d4; text-shadow: 0 0 5px rgba(0,245,212,0.5);">${access.level ?? 'Unknown'}</span>
+                        <div style="color: #e8dcc4; margin-bottom: 5px;">
+                            <span style="color: #b87333;">Access Level:</span> <span style="color: #daa520; font-weight: bold;">${access.level ?? 'Unknown'}</span>
                         </div>
                         ${isCustomKey ? `
-                            <div style="color: #6b6b8a; margin-top: 10px; font-size: 11px; font-family: 'Courier New', monospace;">
-                                <span style="text-transform: uppercase; letter-spacing: 1px;">› Active Modules</span><br>
+                            <div style="color: #b87333; margin-top: 10px; font-size: 11px; font-family: 'Courier New', monospace;">
+                                <strong>Active Mechanisms:</strong><br>
                                 ${selectionsHtml}
                             </div>
                         ` : ''}
                         ${!userSelections.includes('missions') ? `
-                            <div style="color: #ff006e; margin-top: 10px; font-size: 11px; font-family: 'Courier New', monospace; text-shadow: 0 0 5px rgba(255,0,110,0.5);">
-                                ⚠ CRITICAL: <code>missions</code> module not detected
+                            <div style="color: #8b4513; margin-top: 10px; font-size: 11px; font-family: Georgia, serif; font-weight: bold;">
+                                ⚠ Critical: <code>missions</code> mechanism not detected
                             </div>
                         ` : ''}
                     </div>
@@ -532,17 +535,17 @@
             } catch (e) {
                 keyInfoHtml = `
                     <div style="
-                        background: #0a0a0f;
-                        border: 1px solid #ff006e;
+                        background: #1a1410;
+                        border: 2px solid #8b4513;
                         border-radius: 6px;
                         padding: 12px;
                         margin: 15px 0;
                         font-size: 12px;
-                        color: #ff006e;
-                        font-family: 'Courier New', monospace;
-                        text-shadow: 0 0 5px rgba(255,0,110,0.5);
+                        color: #8b4513;
+                        font-family: Georgia, serif;
+                        font-weight: bold;
                     ">
-                        ⚠ CONNECTION ERROR: ${e.message}
+                        ⚠ Telegraph Failure: ${e.message}
                     </div>
                 `;
             }
@@ -564,14 +567,14 @@
                     width: 420px;
                     max-width: 90%;
                 ">
-                    <h3 style="margin-top: 0;">⚙️ Mission Tracker // v3.0.0</h3>
+                    <h3 style="margin-top: 0;">⚙️ Mission Tracker — v3.1.0</h3>
 
                     <label style="display: block; margin: 15px 0 5px;">
-                        › API Key
+                        Telegraph Key
                     </label>
                     <input type="password" id="api-key-input"
                            value="${apiKey}"
-                           placeholder="ENTER_API_KEY..."
+                           placeholder="ENTER_KEY..."
                            style="
                                width: 100%;
                                padding: 10px;
@@ -583,32 +586,31 @@
                         margin: 12px 0;
                         font-size: 11px;
                     ">
-                        <div style="margin-bottom: 8px; font-family: 'Courier New', monospace; text-transform: uppercase; letter-spacing: 1px;"><strong>› Required Permissions</strong></div>
-                        <div style="margin-bottom: 5px;">
-                            <span style="color: #6b6b8a;">Access Level:</span> <span style="color: #00f5d4;">Limited</span>+
+                        <div style="margin-bottom: 8px; font-family: Georgia, serif; font-style: italic; color: #b87333;"><strong>Required Mechanisms</strong></div>
+                        <div style="margin-bottom: 5px; color: #e8dcc4;">
+                            <span style="color: #b87333;">Access Level:</span> <span style="color: #daa520;">Limited</span>+
                         </div>
-                        <div style="margin-bottom: 10px;">
-                            <span style="color: #6b6b8a;">Required Module:</span> <code>missions</code>
+                        <div style="margin-bottom: 10px; color: #e8dcc4;">
+                            <span style="color: #b87333;">Required Gear:</span> <code>missions</code>
                         </div>
                         <a href="https://www.torn.com/preferences.php#tab=api?step=addNewKey&title=MissionTracker&user=missions" target="_blank" style="
                             display: inline-block;
                             padding: 8px 16px;
-                            font-family: 'Courier New', monospace;
-                            font-size: 10px;
-                            text-transform: uppercase;
-                            letter-spacing: 1px;
-                        ">[ Initialize New Key ]</a>
+                            font-family: Georgia, serif;
+                            font-size: 11px;
+                            font-style: italic;
+                        ">[ Forge New Key ]</a>
                     </div>
 
                     ${keyInfoHtml}
 
                     <div style="margin-top: 20px; display: flex; gap: 10px;">
-                        <button id="save-mission-settings" style="flex: 1; padding: 12px;">Execute</button>
-                        <button id="cancel-mission-settings" style="flex: 1; padding: 12px;">Abort</button>
+                        <button id="save-mission-settings" style="flex: 1; padding: 12px;">Engage</button>
+                        <button id="cancel-mission-settings" style="flex: 1; padding: 12px;">Dismiss</button>
                     </div>
 
-                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #1e1e2e; font-size: 10px; color: #6b6b8a; font-family: 'Courier New', monospace;">
-                        [🔒] Key stored locally // No external telemetry
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #704214; font-size: 10px; color: #b87333; font-family: Georgia, serif; font-style: italic;">
+                        [🔒] Key secured in local brass lockbox — No telegraph transmissions
                     </div>
                 </div>
             </div>
@@ -620,7 +622,7 @@
         modal.querySelector('#save-mission-settings').onclick = () => {
             const key = modal.querySelector('#api-key-input').value.trim();
             if (!key) {
-                alert('Please enter an API key.');
+                alert('Please enter a telegraph key.');
                 return;
             }
             Storage.setKey(key);
@@ -632,28 +634,28 @@
         };
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // ─────────────────────────────────────────────────────────
     // MAIN
-    // ═══════════════════════════════════════════════════════════
+    // ─────────────────────────────────────────────────────────
     async function refreshMissions(force = false) {
         try {
             if (force) Storage.clearCache();
             const missions = await TornAPI.fetchMissions();
             const status = processMissions(missions);
             updateBadge(status);
-            console.log('[🦝 Mission Tracker]', status);
+            console.log('[🦝⚙️ Mission Tracker]', status);
         } catch (error) {
-            console.error('[🦝 Mission Tracker] Error:', error.message);
+            console.error('[🦝⚙️ Mission Tracker] Malfunction:', error.message);
         }
     }
 
     function init() {
         const apiKey = Storage.getKey();
         if (!apiKey) {
-            console.log('[🦝 Mission Tracker] No API key. Awaiting initialization...');
+            console.log('[🦝⚙️ Mission Tracker] No telegraph key. Awaiting authentication...');
             if (!GM_getValue('mission_tracker_notified', false)) {
                 setTimeout(() => {
-                    if (confirm('[🦝 Mission Tracker] No API key detected. Open settings?')) {
+                    if (confirm('[🦝⚙️ Mission Tracker] No telegraph key detected. Open settings?')) {
                         showSettings();
                     }
                     GM_setValue('mission_tracker_notified', true);
@@ -669,14 +671,14 @@
 
         setupMutationObserver();
 
-        console.log('[🦝 Mission Tracker] System online. Running Mission Tracker v3.0.0');
+        console.log('[🦝⚙️ Mission Tracker] Steam apparatus online. Running Mission Tracker v3.1.0');
     }
 
-    GM_registerMenuCommand('[🦝] System Settings', showSettings);
-    GM_registerMenuCommand('[🦝] Force Refresh', () => refreshMissions(true));
-    GM_registerMenuCommand('[🦝] Purge Cache', () => {
+    GM_registerMenuCommand('[🦝⚙️] Apparatus Settings', showSettings);
+    GM_registerMenuCommand('[🦝⚙️] Force Recalibration', () => refreshMissions(true));
+    GM_registerMenuCommand('[🦝⚙️] Purge Cache', () => {
         Storage.clearCache();
-        alert('[🦝] Cache purged.');
+        alert('[🦝⚙️] Cache purged from brass cylinders.');
     });
 
     if (document.readyState === 'loading') {
