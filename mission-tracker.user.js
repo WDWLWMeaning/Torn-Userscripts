@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Mission Tracker
 // @namespace    torn-mission-tracker
-// @version      2.0.0
+// @version      2.0.1
 // @description  Track Torn missions with urgency indicators (red <24h, yellow <48h) via the Torn API v2
 // @author       Kevin
 // @match        https://www.torn.com/*

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Extension Boilerplate
 // @namespace    torn-extension-boilerplate
-// @version      2.0.0
+// @version      2.0.1
 // @description  A starter template for Torn userscripts using the Torn API v2
 // @author       Your Name
 // @match        https://www.torn.com/*
@@ -31,7 +31,7 @@
 
     const CONFIG = {
         scriptName: 'Torn Extension',
-        version: '2.0.0',
+        version: '2.0.1',
         apiBaseUrl: 'https://api.torn.com/v2',
         requestComment: 'torn-extension-boilerplate',
         cacheTtl: {

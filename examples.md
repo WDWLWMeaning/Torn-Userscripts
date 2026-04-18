@@ -8,7 +8,7 @@ Display battle stats on profile pages with Torn API v2.
 // ==UserScript==
 // @name         Torn Profile Stats
 // @namespace    torn-profile-stats
-// @version      2.0
+// @version      2.0.1
 // @description  Show battle stats on player profiles via Torn API v2
 // @author       You
 // @match        https://www.torn.com/profiles.php?*
@@ -99,7 +99,7 @@ Show a persistent cooldown display with `/user/cooldowns`.
 // ==UserScript==
 // @name         Torn Cooldown Tracker
 // @namespace    torn-cooldowns
-// @version      2.0
+// @version      2.0.1
 // @description  Track drug, booster, and medical cooldowns via Torn API v2
 // @match        https://www.torn.com/*
 // @grant        GM_xmlhttpRequest
