@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Mission Tracker
 // @namespace    torn-mission-tracker
-// @version      1.0.1
+// @version      1.0.2
 // @description  Track Torn missions with urgency indicators (red <24h, yellow <48h)
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -186,13 +186,38 @@
     function createBubble() {
         if (bubbleElement) return;
         
-        bubbleElement = document.createElement('div');
-        bubbleElement.id = 'torn-mission-bubble';
-        document.body.appendChild(bubbleElement);
+        // Find the missions button in the sidebar
+        const missionsNav = document.getElementById('nav-missions');
+        if (!missionsNav) {
+            console.log('[Mission Tracker] Missions nav not found, using fallback');
+            // Fallback to floating bubble
+            bubbleElement = document.createElement('div');
+            bubbleElement.id = 'torn-mission-bubble';
+            document.body.appendChild(bubbleElement);
+            return;
+        }
+        
+        // Create badge inside the missions nav
+        bubbleElement = document.createElement('span');
+        bubbleElement.id = 'torn-mission-badge';
+        
+        // Insert after the link name
+        const linkName = missionsNav.querySelector('.linkName___FoKha');
+        if (linkName) {
+            linkName.after(bubbleElement);
+        } else {
+            // Fallback: append to the link
+            const link = missionsNav.querySelector('a');
+            if (link) link.appendChild(bubbleElement);
+        }
     }
 
     function updateBubble(status) {
         if (!bubbleElement) createBubble();
+        if (!bubbleElement) return; // Still not found
+        
+        // Check if we're using the sidebar badge or floating fallback
+        const isSidebarBadge = bubbleElement.id === 'torn-mission-badge';
         
         // Hide if no incomplete missions
         if (status.count === 0) {
@@ -201,57 +226,95 @@
         }
         
         // Determine color
-        let color, shadow;
+        let color, bgColor;
         if (status.urgent) {
             color = '#e74c3c'; // Red
-            shadow = '0 4px 15px rgba(231, 76, 60, 0.5)';
+            bgColor = 'rgba(231, 76, 60, 0.9)';
         } else if (status.warning) {
             color = '#f39c12'; // Yellow/Orange
-            shadow = '0 4px 15px rgba(243, 156, 18, 0.5)';
+            bgColor = 'rgba(243, 156, 18, 0.9)';
         } else {
             color = '#3498db'; // Blue (default, no urgency)
-            shadow = '0 4px 15px rgba(52, 152, 219, 0.5)';
+            bgColor = 'rgba(52, 152, 219, 0.9)';
         }
         
-        bubbleElement.style.cssText = `
-            position: fixed;
-            top: 70px;
-            right: 15px;
-            width: 40px;
-            height: 40px;
-            background: ${color};
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 16px;
-            font-family: 'Segoe UI', Tahoma, sans-serif;
-            box-shadow: ${shadow};
-            z-index: 9999;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+        if (isSidebarBadge) {
+            // Sidebar badge style
+            bubbleElement.style.cssText = `
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 18px;
+                height: 18px;
+                background: ${bgColor};
+                color: white;
+                border-radius: 9px;
+                font-size: 11px;
+                font-weight: bold;
+                font-family: 'Segoe UI', Tahoma, sans-serif;
+                margin-left: 6px;
+                padding: 0 5px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                transition: transform 0.2s;
+                cursor: pointer;
+            `;
+            
+            bubbleElement.textContent = status.count;
+            bubbleElement.title = `${status.count} incomplete mission${status.count !== 1 ? 's' : ''}`;
+            
+            // Pulse animation for urgent
+            if (status.urgent) {
+                bubbleElement.style.animation = 'mission-pulse 2s infinite';
+                addPulseStyle();
+            } else {
+                bubbleElement.style.animation = '';
+            }
+        } else {
+            // Floating fallback style
+            bubbleElement.style.cssText = `
+                position: fixed;
+                top: 70px;
+                right: 15px;
+                width: 40px;
+                height: 40px;
+                background: ${color};
+                color: white;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                font-size: 16px;
+                font-family: 'Segoe UI', Tahoma, sans-serif;
+                box-shadow: 0 4px 15px ${color}80;
+                z-index: 9999;
+                cursor: pointer;
+                transition: transform 0.2s, box-shadow 0.2s;
+            `;
+            
+            bubbleElement.textContent = status.count;
+            bubbleElement.title = `${status.count} incomplete mission${status.count !== 1 ? 's' : ''}`;
+            
+            // Click to go to missions page
+            bubbleElement.onclick = () => {
+                window.location.href = 'https://www.torn.com/page.php?sid=missions';
+            };
+        }
+    }
+    
+    function addPulseStyle() {
+        if (document.getElementById('mission-pulse-style')) return;
+        
+        const style = document.createElement('style');
+        style.id = 'mission-pulse-style';
+        style.textContent = `
+            @keyframes mission-pulse {
+                0% { transform: scale(1); box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+                50% { transform: scale(1.15); box-shadow: 0 4px 8px rgba(231, 76, 60, 0.5); }
+                100% { transform: scale(1); box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+            }
         `;
-        
-        bubbleElement.textContent = status.count;
-        bubbleElement.style.display = 'flex';
-        
-        // Hover effect
-        bubbleElement.onmouseenter = () => {
-            bubbleElement.style.transform = 'scale(1.1)';
-        };
-        bubbleElement.onmouseleave = () => {
-            bubbleElement.style.transform = 'scale(1)';
-        };
-        
-        // Click to go to missions page
-        bubbleElement.onclick = () => {
-            window.location.href = 'https://www.torn.com/page.php?sid=missions';
-        };
-        
-        // Tooltip
-        bubbleElement.title = `${status.count} incomplete mission${status.count !== 1 ? 's' : ''}`;
+        document.head.appendChild(style);
     }
 
     // ==========================================
