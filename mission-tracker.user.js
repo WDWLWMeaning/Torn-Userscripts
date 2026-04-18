@@ -3,7 +3,7 @@
 // @namespace    torn-mission-tracker
 // @version      3.2.0
 // @description  Track Torn missions with native Torn styling. Red alert for <24h, yellow for <48h.
-// @author       Kevin (🦝⚙️)
+// @author       Kevin
 // @match        https://www.torn.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
@@ -19,7 +19,7 @@
 
 /**
  * ╔══════════════════════════════════════════════════════════╗
- * ║  🦝⚙️ Torn Mission Tracker v3.2.0                         ║
+ * ║  Torn Mission Tracker v3.2.0                              ║
  * ║  Native Torn styling that blends with the site            ║
  * ╚══════════════════════════════════════════════════════════╝
  */
@@ -149,7 +149,7 @@
     function processMissions(missionsPayload) {
         const givers = missionsPayload?.givers;
         if (!Array.isArray(givers)) {
-            console.log('[🦝⚙️ Mission Tracker] No mission giver data found');
+            console.log('[Mission Tracker] No mission giver data found');
             return { count: 0, urgent: false, warning: false };
         }
 
@@ -194,7 +194,7 @@
 
         GM_addStyle(`
             /* ═══════════════════════════════════════════════════════════ */
-            /* 🦝⚙️ NATIVE TORN THEME v3.2                                  */
+            /* NATIVE TORN THEME v3.2                                       */
             /* ═══════════════════════════════════════════════════════════ */
             
             /* Mission Badge - Torn Native */
@@ -420,7 +420,7 @@
 
         badgeElement.style.display = 'inline-flex';
         badgeElement.textContent = status.count;
-        badgeElement.title = `[🦝⚙️] ${status.count} mission${status.count !== 1 ? 's' : ''} pending`;
+        badgeElement.title = `${status.count} mission${status.count !== 1 ? 's' : ''} pending`;
 
         badgeElement.classList.remove('mission-urgent', 'mission-warning');
 
@@ -622,19 +622,19 @@
             const missions = await TornAPI.fetchMissions();
             const status = processMissions(missions);
             updateBadge(status);
-            console.log('[🦝⚙️ Mission Tracker]', status);
+            console.log('[Mission Tracker]', status);
         } catch (error) {
-            console.error('[🦝⚙️ Mission Tracker] Error:', error.message);
+            console.error('[Mission Tracker] Error:', error.message);
         }
     }
 
     function init() {
         const apiKey = Storage.getKey();
         if (!apiKey) {
-            console.log('[🦝⚙️ Mission Tracker] No API key. Awaiting key...');
+            console.log('[Mission Tracker] No API key. Awaiting key...');
             if (!GM_getValue('mission_tracker_notified', false)) {
                 setTimeout(() => {
-                    if (confirm('[🦝⚙️ Mission Tracker] No API key detected. Open settings?')) {
+                    if (confirm('[Mission Tracker] No API key detected. Open settings?')) {
                         showSettings();
                     }
                     GM_setValue('mission_tracker_notified', true);
@@ -650,14 +650,14 @@
 
         setupMutationObserver();
 
-        console.log('[🦝⚙️ Mission Tracker] Mission Tracker initialized. Running v3.2.0');
+        console.log('[Mission Tracker] Mission Tracker initialized. Running v3.2.0');
     }
 
-    GM_registerMenuCommand('[🦝⚙️] Settings', showSettings);
-    GM_registerMenuCommand('[🦝⚙️] Force Refresh', () => refreshMissions(true));
-    GM_registerMenuCommand('[🦝⚙️] Clear Cache', () => {
+    GM_registerMenuCommand('Settings', showSettings);
+    GM_registerMenuCommand('Force Refresh', () => refreshMissions(true));
+    GM_registerMenuCommand('Clear Cache', () => {
         Storage.clearCache();
-        alert('[🦝⚙️] Cache cleared from storage.');
+        alert('Cache cleared from storage.');
     });
 
     if (document.readyState === 'loading') {
