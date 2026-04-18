@@ -1,15 +1,15 @@
-# Torn Userscript Examples
+# Torn Userscript Examples (API v2)
 
 ## Example 1: Player Stats Overlay
 
-Display battle stats on profile pages:
+Display battle stats on profile pages with Torn API v2.
 
 ```javascript
 // ==UserScript==
 // @name         Torn Profile Stats
 // @namespace    torn-profile-stats
-// @version      1.0
-// @description  Show battle stats on player profiles
+// @version      2.0
+// @description  Show battle stats on player profiles via Torn API v2
 // @author       You
 // @match        https://www.torn.com/profiles.php?*
 // @grant        GM_xmlhttpRequest
@@ -19,24 +19,23 @@ Display battle stats on profile pages:
 
 (function() {
     'use strict';
-    
+
+    const API_BASE = 'https://api.torn.com/v2';
     const API_KEY = GM_getValue('torn_api_key', '');
-    
+
     function init() {
         if (!API_KEY) {
             promptForKey();
             return;
         }
-        
-        // Extract player ID from URL
+
         const urlParams = new URLSearchParams(window.location.search);
         const playerId = urlParams.get('XID');
-        
         if (playerId) {
             fetchPlayerStats(playerId);
         }
     }
-    
+
     function promptForKey() {
         const key = prompt('Enter your Torn API key:');
         if (key) {
@@ -44,23 +43,23 @@ Display battle stats on profile pages:
             location.reload();
         }
     }
-    
+
     function fetchPlayerStats(playerId) {
         GM_xmlhttpRequest({
             method: 'GET',
-            url: `https://api.torn.com/user/${playerId}?key=${API_KEY}&selections=battlestats`,
+            url: `${API_BASE}/user/${playerId}/basic?key=${API_KEY}&comment=torn-profile-stats`,
             onload: function(response) {
-                const data = JSON.parse(response.responseText);
-                if (data.error) {
-                    console.error('Torn API Error:', data.error);
+                const basicData = JSON.parse(response.responseText);
+                if (basicData.error) {
+                    console.error('Torn API Error:', basicData.error);
                     return;
                 }
-                displayStats(data);
+                displayProfile(basicData.profile);
             }
         });
     }
-    
-    function displayStats(data) {
+
+    function displayProfile(profile) {
         const statsHtml = `
             <div class="torn-stats-overlay" style="
                 background: #1a1a1a;
@@ -68,25 +67,22 @@ Display battle stats on profile pages:
                 padding: 10px;
                 margin: 10px 0;
                 border-radius: 5px;
+                color: #ccc;
             ">
-                <h4 style="color: #fff; margin: 0 0 10px 0;">Battle Stats</h4>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; color: #ccc;">
-                    <div>Strength: ${data.strength?.toLocaleString() || 'N/A'}</div>
-                    <div>Defense: ${data.defense?.toLocaleString() || 'N/A'}</div>
-                    <div>Speed: ${data.speed?.toLocaleString() || 'N/A'}</div>
-                    <div>Dexterity: ${data.dexterity?.toLocaleString() || 'N/A'}</div>
-                </div>
+                <h4 style="color: #fff; margin: 0 0 10px 0;">Player Snapshot</h4>
+                <div>ID: ${profile.id}</div>
+                <div>Name: ${profile.name}</div>
+                <div>Level: ${profile.level}</div>
+                <div>Status: ${profile.status?.description || 'Unknown'}</div>
             </div>
         `;
-        
-        // Insert after profile header
+
         const target = document.querySelector('.profile-container') || document.querySelector('#mainContainer');
         if (target) {
             target.insertAdjacentHTML('afterbegin', statsHtml);
         }
     }
-    
-    // Wait for page load
+
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
@@ -97,14 +93,14 @@ Display battle stats on profile pages:
 
 ## Example 2: Cooldown Tracker
 
-Show a persistent cooldown display:
+Show a persistent cooldown display with `/user/cooldowns`.
 
 ```javascript
 // ==UserScript==
 // @name         Torn Cooldown Tracker
 // @namespace    torn-cooldowns
-// @version      1.0
-// @description  Track drug, booster, and medical cooldowns
+// @version      2.0
+// @description  Track drug, booster, and medical cooldowns via Torn API v2
 // @match        https://www.torn.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
@@ -113,38 +109,35 @@ Show a persistent cooldown display:
 
 (function() {
     'use strict';
-    
+
     const API_KEY = GM_getValue('torn_api_key', '');
     const CACHE_KEY = 'torn_cooldowns_cache';
     const CACHE_TIME_KEY = 'torn_cooldowns_time';
-    
+
     function formatTime(seconds) {
         if (seconds <= 0) return 'Ready';
         const hours = Math.floor(seconds / 3600);
         const mins = Math.floor((seconds % 3600) / 60);
         return `${hours}h ${mins}m`;
     }
-    
+
     async function fetchCooldowns() {
-        // Check cache (30 seconds)
         const cached = GM_getValue(CACHE_KEY, null);
         const cachedTime = GM_getValue(CACHE_TIME_KEY, 0);
-        
         if (cached && (Date.now() - cachedTime) < 30000) {
             return JSON.parse(cached);
         }
-        
+
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
                 method: 'GET',
-                url: `https://api.torn.com/user/?key=${API_KEY}&selections=cooldowns`,
+                url: `https://api.torn.com/v2/user/cooldowns?key=${API_KEY}&comment=torn-cooldowns`,
                 onload: (response) => {
                     const data = JSON.parse(response.responseText);
                     if (data.error) {
                         reject(data.error);
                         return;
                     }
-                    // Cache result
                     GM_setValue(CACHE_KEY, JSON.stringify(data.cooldowns));
                     GM_setValue(CACHE_TIME_KEY, Date.now());
                     resolve(data.cooldowns);
@@ -153,7 +146,7 @@ Show a persistent cooldown display:
             });
         });
     }
-    
+
     function createCooldownPanel() {
         const panel = document.createElement('div');
         panel.id = 'torn-cooldown-panel';
@@ -179,9 +172,8 @@ Show a persistent cooldown display:
             <div id="cd-medical">Medical: Loading...</div>
         `;
         document.body.appendChild(panel);
-        return panel;
     }
-    
+
     async function updateDisplay() {
         try {
             const cooldowns = await fetchCooldowns();
@@ -192,7 +184,7 @@ Show a persistent cooldown display:
             console.error('Failed to fetch cooldowns:', e);
         }
     }
-    
+
     function init() {
         if (!API_KEY) {
             const key = prompt('Enter Torn API key for cooldown tracker:');
@@ -202,21 +194,19 @@ Show a persistent cooldown display:
             }
             return;
         }
-        
+
         createCooldownPanel();
         updateDisplay();
-        
-        // Update every 30 seconds
         setInterval(updateDisplay, 30000);
     }
-    
+
     init();
 })();
 ```
 
 ## Example 3: Market Price Checker
 
-Check bazaar prices for items:
+Use `/market/{id}/itemmarket` and read the v2 listing structure.
 
 ```javascript
 // ==UserScript==
@@ -230,24 +220,24 @@ Check bazaar prices for items:
 
 (function() {
     'use strict';
-    
+
     const API_KEY = GM_getValue('torn_api_key', '');
-    
+
     function fetchMarketPrices(itemId) {
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
                 method: 'GET',
-                url: `https://api.torn.com/market/${itemId}?key=${API_KEY}`,
+                url: `https://api.torn.com/v2/market/${itemId}/itemmarket?key=${API_KEY}&limit=20&comment=torn-price-check`,
                 onload: (response) => {
                     const data = JSON.parse(response.responseText);
                     if (data.error) reject(data.error);
-                    else resolve(data);
+                    else resolve(data.itemmarket);
                 },
                 onerror: reject
             });
         });
     }
-    
+
     function addPriceButton(itemElement, itemId) {
         const btn = document.createElement('button');
         btn.textContent = 'Check Prices';
@@ -256,26 +246,22 @@ Check bazaar prices for items:
             btn.disabled = true;
             btn.textContent = 'Loading...';
             try {
-                const data = await fetchMarketPrices(itemId);
-                displayPrices(data, itemElement);
+                const market = await fetchMarketPrices(itemId);
+                displayPrices(market, itemElement);
             } catch (e) {
-                alert('Error fetching prices: ' + e);
+                alert('Error fetching prices: ' + (e.error || e.message || e));
             }
             btn.disabled = false;
             btn.textContent = 'Check Prices';
         };
         itemElement.appendChild(btn);
     }
-    
-    function displayPrices(data, container) {
-        const bazaarAvg = data.bazaar?.length 
-            ? (data.bazaar.reduce((a, b) => a + b.cost, 0) / data.bazaar.length).toFixed(0)
-            : 'N/A';
-        
-        const marketAvg = data.itemmarket?.length
-            ? (data.itemmarket.reduce((a, b) => a + b.cost, 0) / data.itemmarket.length).toFixed(0)
-            : 'N/A';
-        
+
+    function displayPrices(market, container) {
+        const listings = Array.isArray(market.listings) ? market.listings : [];
+        const cheapest = listings.length ? Math.min(...listings.map((listing) => listing.price)) : null;
+        const average = market.item?.average_price ?? null;
+
         const html = `
             <div class="price-info" style="
                 background: #222;
@@ -283,29 +269,24 @@ Check bazaar prices for items:
                 margin-top: 5px;
                 border-radius: 3px;
                 font-size: 12px;
+                color: #ddd;
             ">
-                <div>Bazaar Avg: $${Number(bazaarAvg).toLocaleString()}</div>
-                <div>Market Avg: $${Number(marketAvg).toLocaleString()}</div>
+                <div>Item: ${market.item?.name || 'Unknown'}</div>
+                <div>Cheapest listing: ${cheapest ? '$' + cheapest.toLocaleString() : 'N/A'}</div>
+                <div>Average price: ${average ? '$' + average.toLocaleString() : 'N/A'}</div>
             </div>
         `;
-        
+
         const existing = container.querySelector('.price-info');
         if (existing) existing.remove();
         container.insertAdjacentHTML('beforeend', html);
     }
-    
-    function init() {
-        // Find items on page and add price buttons
-        // (Implementation depends on Torn's DOM structure)
-    }
-    
-    init();
 })();
 ```
 
 ## Common Patterns
 
-### Cache with Expiration
+### Cache with expiration
 ```javascript
 function getCached(key, ttlMinutes) {
     const data = GM_getValue(key, null);
@@ -320,34 +301,23 @@ function setCached(key, data) {
 }
 ```
 
-### Debounce API Calls
-```javascript
-function debounce(fn, ms) {
-    let timeout;
-    return (...args) => {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => fn(...args), ms);
-    };
-}
-```
-
-### Wait for Element
+### Wait for element
 ```javascript
 function waitFor(selector, timeout = 10000) {
     return new Promise((resolve, reject) => {
         const el = document.querySelector(selector);
         if (el) return resolve(el);
-        
+
         const observer = new MutationObserver(() => {
-            const el = document.querySelector(selector);
-            if (el) {
+            const found = document.querySelector(selector);
+            if (found) {
                 observer.disconnect();
-                resolve(el);
+                resolve(found);
             }
         });
-        
+
         observer.observe(document.body, { childList: true, subtree: true });
-        
+
         setTimeout(() => {
             observer.disconnect();
             reject(new Error(`Element ${selector} not found`));
@@ -355,3 +325,9 @@ function waitFor(selector, timeout = 10000) {
     });
 }
 ```
+
+## Notes
+
+- Prefer dedicated v2 endpoints over the selector endpoints.
+- Use `/key/info` when you need to check whether a key includes the selections your script needs.
+- Torn's v2 API is still rolling out, so keep a fallback plan for domains that have not received dedicated endpoints yet.

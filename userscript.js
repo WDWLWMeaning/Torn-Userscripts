@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name         Torn Extension Boilerplate
 // @namespace    torn-extension-boilerplate
-// @version      1.0.0
-// @description  A starter template for Torn userscripts with API integration
+// @version      2.0.0
+// @description  A starter template for Torn userscripts using the Torn API v2
 // @author       Your Name
 // @match        https://www.torn.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
 // @grant        GM_getValue
+// @grant        GM_deleteValue
 // @grant        GM_registerMenuCommand
 // @grant        unsafeWindow
 // @run-at       document-end
@@ -15,80 +16,93 @@
 
 /**
  * Torn Extension Boilerplate
- * 
- * This is a complete starter template for building Torn userscripts.
+ *
+ * Starter template for Torn userscripts built on Torn API v2.
  * It includes:
- * - API key management with secure storage
+ * - API key management with local storage
  * - Cached API requests
  * - Settings panel
  * - Common utility functions
  * - Error handling
- * 
- * Terms of Service: This script stores API keys locally and does not
- * share data with external servers.
  */
 
 (function() {
     'use strict';
 
-    // ==========================================
-    // Configuration
-    // ==========================================
     const CONFIG = {
         scriptName: 'Torn Extension',
-        version: '1.0.0',
+        version: '2.0.0',
+        apiBaseUrl: 'https://api.torn.com/v2',
+        requestComment: 'torn-extension-boilerplate',
         cacheTtl: {
-            user: 60,      // Cache user data for 60 minutes
-            faction: 30,   // Cache faction data for 30 minutes
-            market: 5      // Cache market data for 5 minutes
+            basic: 30,
+            faction: 30,
+            money: 5,
+            cooldowns: 1,
+            battlestats: 15,
+            market: 5
         }
     };
 
-    // ==========================================
-    // State
-    // ==========================================
     const state = {
-        apiKey: null,
-        cache: {}
+        apiKey: null
     };
 
-    // ==========================================
-    // Storage / API Key Management
-    // ==========================================
     const Storage = {
         getKey: () => GM_getValue('torn_api_key', ''),
         setKey: (key) => GM_setValue('torn_api_key', key),
         deleteKey: () => GM_deleteValue('torn_api_key'),
-        
+
         getCache: (key) => {
             const data = GM_getValue(`cache_${key}`, null);
             const time = GM_getValue(`cache_${key}_time`, 0);
             if (!data) return null;
             return { data: JSON.parse(data), time };
         },
-        
+
         setCache: (key, data) => {
             GM_setValue(`cache_${key}`, JSON.stringify(data));
             GM_setValue(`cache_${key}_time`, Date.now());
         },
-        
+
         clearCache: () => {
-            // Clear all cached values
-            const keys = ['user', 'faction', 'company', 'market'];
-            keys.forEach(k => {
-                GM_deleteValue(`cache_${k}`);
-                GM_deleteValue(`cache_${k}_time`);
+            const keys = [
+                'basic',
+                'money',
+                'cooldowns',
+                'battlestats',
+                'faction_basic',
+                'key_info'
+            ];
+            keys.forEach((key) => {
+                GM_deleteValue(`cache_${key}`);
+                GM_deleteValue(`cache_${key}_time`);
             });
         }
     };
 
-    // ==========================================
-    // API Client
-    // ==========================================
+    function buildApiUrl(path, query = {}) {
+        const url = new URL(`${CONFIG.apiBaseUrl}${path}`);
+        const key = Storage.getKey();
+        if (key) {
+            url.searchParams.set('key', key);
+        }
+        url.searchParams.set('comment', CONFIG.requestComment);
+
+        for (const [name, value] of Object.entries(query)) {
+            if (value === undefined || value === null || value === '') continue;
+            if (Array.isArray(value)) {
+                value.forEach((entry) => url.searchParams.append(name, entry));
+            } else {
+                url.searchParams.set(name, value);
+            }
+        }
+
+        return url.toString();
+    }
+
     const TornAPI = {
-        baseUrl: 'https://api.torn.com',
-        
-        request: (endpoint, params = {}) => {
+        request: (path, query = {}) => {
             return new Promise((resolve, reject) => {
                 const key = Storage.getKey();
                 if (!key) {
@@ -96,17 +110,11 @@
                     return;
                 }
 
-                const url = new URL(`${TornAPI.baseUrl}/${endpoint}/${params.id || ''}`);
-                url.searchParams.set('key', key);
-                if (params.selections) {
-                    url.searchParams.set('selections', params.selections);
-                }
-
                 GM_xmlhttpRequest({
                     method: 'GET',
-                    url: url.toString(),
+                    url: buildApiUrl(path, query),
                     headers: {
-                        'Accept': 'application/json'
+                        Accept: 'application/json'
                     },
                     onload: (response) => {
                         try {
@@ -116,55 +124,55 @@
                             } else {
                                 resolve(data);
                             }
-                        } catch (e) {
+                        } catch {
                             reject(new Error('Invalid JSON response'));
                         }
                     },
-                    onerror: (error) => {
-                        reject(new Error('Network error: ' + error.statusText));
-                    },
-                    ontimeout: () => {
-                        reject(new Error('Request timeout'));
-                    }
+                    onerror: (error) => reject(new Error(`Network error: ${error.statusText || 'unknown error'}`)),
+                    ontimeout: () => reject(new Error('Request timeout'))
                 });
             });
         },
 
-        // Cached request wrapper
-        cachedRequest: (cacheKey, ttlMinutes, endpoint, params) => {
+        cachedRequest: (cacheKey, ttlMinutes, path, query = {}) => {
             const cached = Storage.getCache(cacheKey);
             if (cached && (Date.now() - cached.time) < ttlMinutes * 60000) {
                 return Promise.resolve(cached.data);
             }
-            
-            return TornAPI.request(endpoint, params).then(data => {
+
+            return TornAPI.request(path, query).then((data) => {
                 Storage.setCache(cacheKey, data);
                 return data;
             });
         },
 
-        // Convenience methods
-        getUser: (selections = 'basic', userId = '') => 
-            TornAPI.cachedRequest('user', CONFIG.cacheTtl.user, 'user', { id: userId, selections }),
-        
-        getFaction: (selections = 'basic', factionId = '') =>
-            TornAPI.cachedRequest('faction', CONFIG.cacheTtl.faction, 'faction', { id: factionId, selections }),
-        
-        getCompany: (selections = 'profile', companyId = '') =>
-            TornAPI.request('company', { id: companyId, selections }),
-        
-        getMarket: (itemId) =>
-            TornAPI.cachedRequest(`market_${itemId}`, CONFIG.cacheTtl.market, 'market', { id: itemId }),
-        
-        getKeyInfo: () =>
-            TornAPI.request('key', {})
+        // Prefer dedicated v2 endpoints.
+        getMyBasic: () => TornAPI.cachedRequest('basic', CONFIG.cacheTtl.basic, '/user/basic'),
+        getUserBasic: (userId) => TornAPI.cachedRequest(`basic_${userId}`, CONFIG.cacheTtl.basic, `/user/${userId}/basic`),
+        getMyMoney: () => TornAPI.cachedRequest('money', CONFIG.cacheTtl.money, '/user/money'),
+        getMyCooldowns: () => TornAPI.cachedRequest('cooldowns', CONFIG.cacheTtl.cooldowns, '/user/cooldowns'),
+        getMyBattlestats: () => TornAPI.cachedRequest('battlestats', CONFIG.cacheTtl.battlestats, '/user/battlestats'),
+        getFactionBasic: (factionId = '') => TornAPI.cachedRequest(
+            factionId ? `faction_basic_${factionId}` : 'faction_basic',
+            CONFIG.cacheTtl.faction,
+            factionId ? `/faction/${factionId}/basic` : '/faction/basic'
+        ),
+        getItemMarket: (itemId, options = {}) => TornAPI.cachedRequest(
+            `market_${itemId}_${options.limit || 20}_${options.offset || 0}_${options.bonus || 'all'}`,
+            CONFIG.cacheTtl.market,
+            `/market/${itemId}/itemmarket`,
+            options
+        ),
+        getKeyInfo: () => TornAPI.cachedRequest('key_info', CONFIG.cacheTtl.basic, '/key/info'),
+
+        // Use the generic selector endpoint only when Torn does not yet expose a dedicated v2 path.
+        requestSelection: (domain, selections, query = {}) => TornAPI.request(`/${domain}`, {
+            ...query,
+            selections: Array.isArray(selections) ? selections.join(',') : selections
+        })
     };
 
-    // ==========================================
-    // UI Components
-    // ==========================================
     const UI = {
-        // Create a styled panel
         createPanel: (title, content) => {
             const panel = document.createElement('div');
             panel.className = 'torn-userscript-panel';
@@ -195,7 +203,6 @@
             return panel;
         },
 
-        // Show notification
         notify: (message, type = 'info') => {
             const colors = {
                 info: '#3498db',
@@ -203,7 +210,7 @@
                 warning: '#f39c12',
                 error: '#e74c3c'
             };
-            
+
             const div = document.createElement('div');
             div.style.cssText = `
                 position: fixed;
@@ -219,8 +226,7 @@
                 animation: slideIn 0.3s ease;
             `;
             div.textContent = message;
-            
-            // Add animation
+
             const style = document.createElement('style');
             style.textContent = `
                 @keyframes slideIn {
@@ -229,12 +235,11 @@
                 }
             `;
             document.head.appendChild(style);
-            
+
             document.body.appendChild(div);
             setTimeout(() => div.remove(), 5000);
         },
 
-        // Settings modal
         showSettings: () => {
             const existing = document.getElementById('torn-userscript-settings');
             if (existing) existing.remove();
@@ -257,7 +262,7 @@
                         border: 2px solid #e94560;
                         border-radius: 10px;
                         padding: 30px;
-                        width: 400px;
+                        width: 420px;
                         max-width: 90%;
                     }
                     .settings-box h2 {
@@ -310,8 +315,8 @@
                 <div class="settings-box">
                     <h2>${CONFIG.scriptName} Settings</h2>
                     <label for="api-key">Torn API Key:</label>
-                    <input type="password" id="api-key" value="${Storage.getKey()}" 
-                           placeholder="Enter your 16-character API key">
+                    <input type="password" id="api-key" value="${Storage.getKey()}"
+                           placeholder="Enter your Torn API key">
                     <div class="buttons">
                         <button class="btn-primary" id="save-settings">Save</button>
                         <button class="btn-secondary" id="close-settings">Cancel</button>
@@ -325,20 +330,17 @@
 
             document.body.appendChild(modal);
 
-            // Event handlers
             modal.querySelector('#close-settings').onclick = () => modal.remove();
             modal.querySelector('#save-settings').onclick = () => {
                 const key = modal.querySelector('#api-key').value.trim();
-                if (key && key.length !== 16) {
-                    alert('API key should be 16 characters');
+                if (!key) {
+                    alert('Please enter an API key.');
                     return;
                 }
-                if (key) {
-                    Storage.setKey(key);
-                    UI.notify('Settings saved!', 'success');
-                    modal.remove();
-                    init(); // Re-initialize with new key
-                }
+                Storage.setKey(key);
+                UI.notify('Settings saved!', 'success');
+                modal.remove();
+                init();
             };
             modal.onclick = (e) => {
                 if (e.target === modal) modal.remove();
@@ -346,21 +348,17 @@
         }
     };
 
-    // ==========================================
-    // Utilities
-    // ==========================================
     const Utils = {
-        // Wait for element to appear in DOM
         waitFor: (selector, timeout = 10000) => {
             return new Promise((resolve, reject) => {
                 const el = document.querySelector(selector);
                 if (el) return resolve(el);
 
                 const observer = new MutationObserver(() => {
-                    const el = document.querySelector(selector);
-                    if (el) {
+                    const found = document.querySelector(selector);
+                    if (found) {
                         observer.disconnect();
-                        resolve(el);
+                        resolve(found);
                     }
                 });
 
@@ -373,19 +371,16 @@
             });
         },
 
-        // Format numbers
         formatNumber: (num) => {
             if (num === undefined || num === null) return 'N/A';
-            return num.toLocaleString();
+            return Number(num).toLocaleString();
         },
 
-        // Format money
         formatMoney: (amount) => {
             if (amount === undefined || amount === null) return '$0';
-            return '$' + amount.toLocaleString();
+            return '$' + Number(amount).toLocaleString();
         },
 
-        // Debounce function
         debounce: (fn, ms) => {
             let timeout;
             return (...args) => {
@@ -394,7 +389,6 @@
             };
         },
 
-        // Throttle function
         throttle: (fn, ms) => {
             let lastTime = 0;
             return (...args) => {
@@ -407,52 +401,44 @@
         }
     };
 
-    // ==========================================
-    // Main Features (Customize these!)
-    // ==========================================
     const Features = {
-        // Example: Display player networth on homepage
-        showNetworth: async () => {
+        showWealth: async () => {
             if (!window.location.pathname.includes('index.php')) return;
-            
+
             try {
-                const data = await TornAPI.getUser('basic,networth');
-                const networth = data.networth;
-                
-                if (networth) {
-                    const panel = UI.createPanel('Your Networth', `
-                        <div style="font-size: 18px; font-weight: bold; color: #2ecc71;">
-                            ${Utils.formatMoney(networth.total)}
-                        </div>
-                        <div style="font-size: 12px; color: #888; margin-top: 5px;">
-                            Last updated: ${new Date().toLocaleTimeString()}
-                        </div>
-                    `);
-                    
-                    // Insert after sidebar or main content
-                    const sidebar = document.querySelector('#sidebarroot');
-                    if (sidebar) {
-                        sidebar.insertBefore(panel, sidebar.firstChild);
-                    }
+                const data = await TornAPI.getMyMoney();
+                const money = data.money;
+                if (!money) return;
+
+                const panel = UI.createPanel('Your Wealth', `
+                    <div style="font-size: 18px; font-weight: bold; color: #2ecc71;">
+                        Daily networth: ${Utils.formatMoney(money.daily_networth)}
+                    </div>
+                    <div style="margin-top: 8px; font-size: 13px; line-height: 1.6;">
+                        <div>Wallet: ${Utils.formatMoney(money.wallet)}</div>
+                        <div>Points: ${Utils.formatNumber(money.points)}</div>
+                        <div>City bank: ${money.city_bank ? Utils.formatMoney(money.city_bank.amount) : 'None'}</div>
+                    </div>
+                    <div style="font-size: 12px; color: #888; margin-top: 8px;">
+                        Last updated: ${new Date().toLocaleTimeString()}
+                    </div>
+                `);
+
+                const sidebar = document.querySelector('#sidebarroot');
+                if (sidebar) {
+                    sidebar.insertBefore(panel, sidebar.firstChild);
                 }
             } catch (e) {
-                console.error('Failed to load networth:', e);
+                console.error('Failed to load wealth:', e);
             }
-        },
-
-        // Add your custom features here!
-        // myCustomFeature: () => { ... }
+        }
     };
 
-    // ==========================================
-    // Initialization
-    // ==========================================
     function init() {
         state.apiKey = Storage.getKey();
-        
+
         if (!state.apiKey) {
             console.log(`${CONFIG.scriptName}: No API key found. Open settings to configure.`);
-            // Show a one-time notification
             if (!GM_getValue('has_shown_setup', false)) {
                 setTimeout(() => {
                     UI.notify('Click the Tampermonkey icon → User Script Commands → Settings to configure your API key', 'info');
@@ -462,16 +448,10 @@
             return;
         }
 
-        console.log(`${CONFIG.scriptName} v${CONFIG.version} initialized`);
-        
-        // Run features based on current page
-        Features.showNetworth();
-        // Features.myCustomFeature();
+        console.log(`${CONFIG.scriptName} v${CONFIG.version} initialized with Torn API v2`);
+        Features.showWealth();
     }
 
-    // ==========================================
-    // Register Menu Commands
-    // ==========================================
     GM_registerMenuCommand('⚙️ Settings', UI.showSettings);
     GM_registerMenuCommand('🔄 Clear Cache', () => {
         Storage.clearCache();
@@ -480,19 +460,19 @@
     GM_registerMenuCommand('📊 API Key Info', async () => {
         try {
             const info = await TornAPI.getKeyInfo();
-            alert(`API Key Info:\nAccess Level: ${info.access_level}\nSelections: ${info.selections?.join(', ') || 'N/A'}`);
+            const access = info.info?.access;
+            const userSelections = info.info?.selections?.user || [];
+            alert(
+                `API Key Info:\nAccess type: ${access?.type || 'Unknown'}\nAccess level: ${access?.level ?? 'Unknown'}\nUser selections: ${userSelections.join(', ') || 'N/A'}`
+            );
         } catch (e) {
             UI.notify('Failed to get key info: ' + e.message, 'error');
         }
     });
 
-    // ==========================================
-    // Start
-    // ==========================================
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
         init();
     }
-
 })();

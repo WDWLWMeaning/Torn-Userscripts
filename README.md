@@ -1,149 +1,87 @@
-# Torn Userscript Boilerplate
+# Torn Userscripts
 
-A complete starter template for building Torn City browser extensions with Tampermonkey.
+A collection of browser extensions and userscripts for [Torn City](https://www.torn.com), updated for the Torn API v2.
 
-## Features
+## About
 
-- ✅ Secure API key storage
-- ✅ Cached API requests with configurable TTL
-- ✅ Settings panel with privacy notice
-- ✅ Notification system
-- ✅ Error handling
-- ✅ Rate limiting helpers
-- ✅ Utility functions (waitFor, debounce, throttle)
-- ✅ Responsive UI components
+These userscripts enhance the Torn gameplay experience by adding custom features, automating lightweight tasks, and displaying data from Torn's API.
+
+## Prerequisites
+
+- [Tampermonkey](https://www.tampermonkey.net/) browser extension (or Greasemonkey/Violentmonkey)
+- A Torn account
+- A Torn API key with the selections your script needs
 
 ## Quick Start
 
-1. Install [Tampermonkey](https://www.tampermonkey.net/) (Chrome/Firefox/Edge)
-2. Click the Tampermonkey icon → "Create a new script"
-3. Delete the default template
-4. Copy the contents of `userscript.js` into the editor
-5. Press Ctrl+S to save
-6. Visit [torn.com](https://www.torn.com) and configure your API key
+1. Install Tampermonkey for your browser.
+2. Copy a script below into a new Tampermonkey script.
+3. Configure your Torn API key when prompted.
+4. Grant the specific v2 selections the script needs.
 
-## Configuration
+## Userscripts
 
-### Getting Your API Key
+### Boilerplate
+A starter template for building your own Torn extensions on top of the v2 API.
 
-1. Log into Torn
-2. Go to [Preferences → API Keys](https://www.torn.com/preferences.php#tab=api)
-3. Create a new key with appropriate permissions
-4. Copy the 16-character key
+**Features:**
+- Local API key storage
+- Cached API requests
+- Settings panel
+- Notification system
+- Dedicated v2 endpoint helpers
+- Generic selector fallback for endpoints Torn has not split yet
 
-### Setting Up the Script
+**Install:** Copy the contents of `userscript.js` into a new Tampermonkey script.
 
-1. Click the Tampermonkey icon
-2. Click on this script
-3. Go to "User Script Commands" → "⚙️ Settings"
-4. Paste your API key
-5. Save
+### Mission Tracker
+Tracks active missions and warns when accepted contracts are close to expiring.
 
-## Customization
+**Features:**
+- Uses `/user/missions`
+- Uses `/key/info` to validate permissions
+- Red badge for <24h, yellow for <48h
+- Five-minute caching to stay polite to Torn's API
 
-### Adding New Features
+**Install:** Copy the contents of `mission-tracker.user.js` into a new Tampermonkey script.
 
-Edit the `Features` object in the script:
+## Torn API v2 notes
 
-```javascript
-const Features = {
-    showNetworth: async () => {
-        // Your code here
-    },
-    
-    myNewFeature: async () => {
-        // Fetch data
-        const data = await TornAPI.getUser('basic,cooldowns');
-        
-        // Create UI
-        const panel = UI.createPanel('My Feature', `
-            <div>Content here</div>
-        `);
-        
-        // Insert into page
-        document.body.appendChild(panel);
-    }
-};
-```
+- Base URL: `https://api.torn.com/v2`
+- OpenAPI spec: <https://www.torn.com/swagger/openapi.json>
+- Prefer dedicated endpoints like `/user/missions` and `/key/info`
+- The generic selector endpoints (`/user`, `/faction`, `/market`) still exist, but dedicated v2 paths are cleaner when available
+- Torn's v2 rollout is still in progress, so some older domains may still need selector-based fallbacks
 
-Then call it in `init()`:
+## Development
 
-```javascript
-function init() {
-    Features.showNetworth();
-    Features.myNewFeature();
-}
-```
+### Creating a new script
 
-### API Endpoints
+1. Copy `userscript.js` as a starting point.
+2. Add features through the `Features` object.
+3. Prefer dedicated v2 paths first.
+4. Cache anything that does not need live-second accuracy.
+5. Test on Torn pages before shipping.
 
-Available convenience methods:
+### Best practices
 
-```javascript
-// Get user data (cached)
-const user = await TornAPI.getUser('basic,profile', '123456');
-
-// Get faction data (cached)
-const faction = await TornAPI.getFaction('basic,members', '12345');
-
-// Get market prices (cached)
-const prices = await TornAPI.getMarket('1'); // Item ID 1 = Baseball Bat
-
-// Raw request (no caching)
-const data = await TornAPI.request('user', { 
-    id: '123456', 
-    selections: 'basic,battlestats' 
-});
-```
-
-### Cache Configuration
-
-Adjust cache TTL in the `CONFIG` object:
-
-```javascript
-const CONFIG = {
-    cacheTtl: {
-        user: 60,      // minutes
-        faction: 30,
-        market: 5
-    }
-};
-```
+- **Never hardcode API keys**
+- **Cache aggressively**
+- **Handle missing selections cleanly**
+- **Prefer dedicated v2 endpoints**
+- **Keep everything local unless the user explicitly wants otherwise**
 
 ## Privacy & Security
 
-- API keys are stored locally using `GM_setValue` (browser extension storage)
+- API keys are stored locally in the browser
 - No data is sent to external servers
 - All API requests go directly to Torn's servers
-- Clear cache anytime via User Script Commands
-
-## Troubleshooting
-
-### "No API key configured"
-
-Open the settings panel and enter your API key.
-
-### "API Error 2: Incorrect key"
-
-Your API key is invalid or expired. Generate a new one in Torn preferences.
-
-### "Rate limited"
-
-You're making too many requests. The script has built-in caching, but if you manually trigger many requests, wait a few minutes.
-
-### Script not running
-
-Check that:
-1. Tampermonkey is enabled
-2. The script is enabled in Tampermonkey's dashboard
-3. You're on a Torn page (https://www.torn.com/*)
+- Scripts are open source, so users can inspect what they do
 
 ## Resources
 
-- [Torn API Documentation](https://www.torn.com/api.html)
-- [Tampermonkey Documentation](https://www.tampermonkey.net/documentation.php)
-- [OpenClaw Skill: torn-tampermonkey](../../SKILL.md)
-
-## License
-
-This boilerplate is provided as-is for the Torn community. Follow Torn's API Terms of Service when building and sharing userscripts.
+- OpenAPI spec: <https://www.torn.com/swagger/openapi.json>
+- Human docs: <https://www.torn.com/api.html>
+- Tampermonkey docs: <https://www.tampermonkey.net/documentation.php>
+- Torn forums: <https://www.torn.com/forums.php>
+- Examples: [examples.md](examples.md)
