@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Mission Tracker
 // @namespace    torn-mission-tracker
-// @version      2.0.2
+// @version      2.0.3
 // @description  Track Torn missions with urgency indicators (red <24h, yellow <48h) via the Torn API v2
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -214,16 +214,15 @@
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                min-width: 16px;
-                height: 16px;
+                width: 18px;
+                height: 18px;
                 background: #3498db;
                 color: white;
-                border-radius: 8px;
+                border-radius: 50%;
                 font-size: 10px;
                 font-weight: bold;
                 font-family: 'Segoe UI', Tahoma, sans-serif;
                 margin-left: 6px;
-                padding: 0 4px;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.3);
                 vertical-align: middle;
                 pointer-events: none;
