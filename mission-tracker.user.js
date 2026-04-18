@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Mission Tracker
 // @namespace    torn-mission-tracker
-// @version      3.1.0
+// @version      3.1.1
 // @description  Track Torn missions with steampunk brass & leather styling. Red alert for <24h, yellow for <48h.
 // @author       Kevin (🦝⚙️)
 // @match        https://www.torn.com/*
@@ -20,8 +20,7 @@
 /**
  * ┌─────────────────────────────────────────────────────────┐
  * │  🦝⚙️ Kevin's Steampunk Mission Tracker v3.1.0          │
- * │  Brass gears & leather-bound mission tracking          │
- * │  for the distinguished Torn gentleman/lady              │
+ * │  Steampunk-styled mission tracking for Torn City       │
  * └─────────────────────────────────────────────────────────┘
  * 
  * Theme: Steampunk Raccoon
@@ -209,8 +208,8 @@
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                width: 22px;
-                height: 22px;
+                width: 18px;
+                height: 18px;
                 background: linear-gradient(145deg, ${BRASS.leather}, ${BRASS.coal});
                 color: ${BRASS.steam};
                 border: 2px solid ${BRASS.primary};
@@ -257,12 +256,12 @@
             /* Mobile Override - Compact Brass */
             @media (max-width: 768px) {
                 #torn-mission-badge {
-                    right: 4px;
-                    top: 4px;
+                    right: 6px;
+                    top: 6px;
                     transform: none;
-                    width: 18px;
-                    height: 18px;
-                    font-size: 9px;
+                    width: 14px;
+                    height: 14px;
+                    font-size: 8px;
                     border-width: 1px;
                 }
                 #torn-mission-badge.mission-urgent {
@@ -512,7 +511,7 @@
                         font-size: 12px;
                         box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
                     ">
-                        <div style="color: #b87333; margin-bottom: 8px; font-family: Georgia, serif; font-style: italic;"><strong>Apparatus Status</strong></div>
+                        <div style="color: #b87333; margin-bottom: 8px; font-family: Georgia, serif; font-style: italic;"><strong>API Key Info</strong></div>
                         <div style="color: #e8dcc4; margin-bottom: 5px;">
                             <span style="color: #b87333;">Access Type:</span> <span style="color: #daa520; font-weight: bold;">${access.type || 'Unknown'}</span>
                         </div>
@@ -521,13 +520,13 @@
                         </div>
                         ${isCustomKey ? `
                             <div style="color: #b87333; margin-top: 10px; font-size: 11px; font-family: 'Courier New', monospace;">
-                                <strong>Active Mechanisms:</strong><br>
+                                <strong>User Selections:</strong><br>
                                 ${selectionsHtml}
                             </div>
                         ` : ''}
                         ${!userSelections.includes('missions') ? `
                             <div style="color: #8b4513; margin-top: 10px; font-size: 11px; font-family: Georgia, serif; font-weight: bold;">
-                                ⚠ Critical: <code>missions</code> mechanism not detected
+                                ⚠ Critical: <code>missions</code> selection not detected
                             </div>
                         ` : ''}
                     </div>
@@ -545,7 +544,7 @@
                         font-family: Georgia, serif;
                         font-weight: bold;
                     ">
-                        ⚠ Telegraph Failure: ${e.message}
+                        ⚠ Connection Error: ${e.message}
                     </div>
                 `;
             }
@@ -570,11 +569,11 @@
                     <h3 style="margin-top: 0;">⚙️ Mission Tracker — v3.1.0</h3>
 
                     <label style="display: block; margin: 15px 0 5px;">
-                        Telegraph Key
+                        API Key
                     </label>
                     <input type="password" id="api-key-input"
                            value="${apiKey}"
-                           placeholder="ENTER_KEY..."
+                           placeholder="Enter your API key..."
                            style="
                                width: 100%;
                                padding: 10px;
@@ -586,12 +585,12 @@
                         margin: 12px 0;
                         font-size: 11px;
                     ">
-                        <div style="margin-bottom: 8px; font-family: Georgia, serif; font-style: italic; color: #b87333;"><strong>Required Mechanisms</strong></div>
+                        <div style="margin-bottom: 8px; font-family: Georgia, serif; font-style: italic; color: #b87333;"><strong>Required Permissions</strong></div>
                         <div style="margin-bottom: 5px; color: #e8dcc4;">
                             <span style="color: #b87333;">Access Level:</span> <span style="color: #daa520;">Limited</span>+
                         </div>
                         <div style="margin-bottom: 10px; color: #e8dcc4;">
-                            <span style="color: #b87333;">Required Gear:</span> <code>missions</code>
+                            <span style="color: #b87333;">Required Selection:</span> <code>missions</code>
                         </div>
                         <a href="https://www.torn.com/preferences.php#tab=api?step=addNewKey&title=MissionTracker&user=missions" target="_blank" style="
                             display: inline-block;
@@ -599,18 +598,18 @@
                             font-family: Georgia, serif;
                             font-size: 11px;
                             font-style: italic;
-                        ">[ Forge New Key ]</a>
+                        ">[ Create New Key ]</a>
                     </div>
 
                     ${keyInfoHtml}
 
                     <div style="margin-top: 20px; display: flex; gap: 10px;">
-                        <button id="save-mission-settings" style="flex: 1; padding: 12px;">Engage</button>
-                        <button id="cancel-mission-settings" style="flex: 1; padding: 12px;">Dismiss</button>
+                        <button id="save-mission-settings" style="flex: 1; padding: 12px;">Save</button>
+                        <button id="cancel-mission-settings" style="flex: 1; padding: 12px;">Cancel</button>
                     </div>
 
                     <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #704214; font-size: 10px; color: #b87333; font-family: Georgia, serif; font-style: italic;">
-                        [🔒] Key secured in local brass lockbox — No telegraph transmissions
+                        [🔒] Key secured in local local storage — No external servers
                     </div>
                 </div>
             </div>
@@ -622,7 +621,7 @@
         modal.querySelector('#save-mission-settings').onclick = () => {
             const key = modal.querySelector('#api-key-input').value.trim();
             if (!key) {
-                alert('Please enter a telegraph key.');
+                alert('Please enter an API key.');
                 return;
             }
             Storage.setKey(key);
@@ -645,17 +644,17 @@
             updateBadge(status);
             console.log('[🦝⚙️ Mission Tracker]', status);
         } catch (error) {
-            console.error('[🦝⚙️ Mission Tracker] Malfunction:', error.message);
+            console.error('[🦝⚙️ Mission Tracker] Error:', error.message);
         }
     }
 
     function init() {
         const apiKey = Storage.getKey();
         if (!apiKey) {
-            console.log('[🦝⚙️ Mission Tracker] No telegraph key. Awaiting authentication...');
+            console.log('[🦝⚙️ Mission Tracker] No API key. Awaiting key...');
             if (!GM_getValue('mission_tracker_notified', false)) {
                 setTimeout(() => {
-                    if (confirm('[🦝⚙️ Mission Tracker] No telegraph key detected. Open settings?')) {
+                    if (confirm('[🦝⚙️ Mission Tracker] No API key detected. Open settings?')) {
                         showSettings();
                     }
                     GM_setValue('mission_tracker_notified', true);
@@ -671,14 +670,14 @@
 
         setupMutationObserver();
 
-        console.log('[🦝⚙️ Mission Tracker] Steam apparatus online. Running Mission Tracker v3.1.0');
+        console.log('[🦝⚙️ Mission Tracker] Mission Tracker initialized. Running v3.1.0');
     }
 
-    GM_registerMenuCommand('[🦝⚙️] Apparatus Settings', showSettings);
-    GM_registerMenuCommand('[🦝⚙️] Force Recalibration', () => refreshMissions(true));
+    GM_registerMenuCommand('[🦝⚙️] Settings', showSettings);
+    GM_registerMenuCommand('[🦝⚙️] Force Refresh', () => refreshMissions(true));
     GM_registerMenuCommand('[🦝⚙️] Purge Cache', () => {
         Storage.clearCache();
-        alert('[🦝⚙️] Cache purged from brass cylinders.');
+        alert('[🦝⚙️] Cache cleared from storage.');
     });
 
     if (document.readyState === 'loading') {
