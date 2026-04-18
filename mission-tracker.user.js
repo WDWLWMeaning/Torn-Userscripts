@@ -247,7 +247,7 @@
         
         // Click to go to missions page
         bubbleElement.onclick = () => {
-            window.location.href = 'https://www.torn.com/missions.php';
+            window.location.href = 'https://www.torn.com/page.php?sid=missions';
         };
         
         // Tooltip
