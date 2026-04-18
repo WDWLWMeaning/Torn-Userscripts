@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Mission Tracker
 // @namespace    torn-mission-tracker
-// @version      2.0.7
+// @version      2.0.8
 // @description  Track Torn missions with urgency indicators (red <24h, yellow <48h) via the Torn API v2
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -308,6 +308,15 @@
                 const access = info.access || {};
                 const userSelections = Array.isArray(info.selections?.user) ? info.selections.user : [];
 
+                // Check if this is a custom key (has user selections)
+                const isCustomKey = userSelections.length > 0;
+                
+                // Build selections list with missions highlighted in green
+                const selectionsHtml = isCustomKey ? userSelections.map(sel => {
+                    const isMissions = sel === 'missions';
+                    return `<span style="color: ${isMissions ? '#2ecc71' : '#aaa'}; ${isMissions ? 'font-weight: bold;' : ''}">${sel}</span>`;
+                }).join(', ') : '';
+                
                 keyInfoHtml = `
                     <div style="
                         background: #16213e;
@@ -320,12 +329,14 @@
                         <div style="color: #888; margin-bottom: 5px;"><strong>Current API Key Info:</strong></div>
                         <div style="color: #fff;">Access Type: <span style="color: #2ecc71;">${access.type || 'Unknown'}</span></div>
                         <div style="color: #fff;">Access Level: <span style="color: #2ecc71;">${access.level ?? 'Unknown'}</span></div>
-                        <div style="color: #aaa; margin-top: 5px; font-size: 11px;">
-                            User selections: ${userSelections.length ? userSelections.join(', ') : 'N/A'}
-                        </div>
+                        ${isCustomKey ? `
+                            <div style="color: #888; margin-top: 8px; font-size: 11px;">
+                                Custom selections: ${selectionsHtml}
+                            </div>
+                        ` : ''}
                         ${!userSelections.includes('missions') ? `
                             <div style="color: #e74c3c; margin-top: 8px; font-size: 11px;">
-                                ⚠️ This key does not include the v2 <code>missions</code> selection. Update the key permissions in Torn.
+                                ⚠️ This key does not include the <code>missions</code> selection. Create a new key with the button above.
                             </div>
                         ` : ''}
                     </div>
@@ -400,16 +411,18 @@
                         <div style="color: #fff; margin-bottom: 5px;">
                             <strong>Access Level:</strong> <span style="color: #2ecc71;">Limited</span> or higher
                         </div>
-                        <div style="color: #fff; margin-bottom: 5px;">
+                        <div style="color: #fff; margin-bottom: 8px;">
                             <strong>Required Selection:</strong> <code style="background: #0f3460; padding: 2px 4px; border-radius: 3px;">missions</code>
                         </div>
-                        <div style="color: #aaa; margin-top: 8px;">
-                            💡 <strong>Tip:</strong> Create a custom key named "MissionTracker" with only the 
-                            <code>missions</code> selection for better security.
-                        </div>
-                        <div style="margin-top: 8px;">
-                            <a href="https://www.torn.com/preferences.php#tab=api" target="_blank" style="color: #3498db;">→ Create/Edit API Keys</a>
-                        </div>
+                        <a href="https://www.torn.com/preferences.php#tab=api?step=addNewKey&title=MissionTracker&user=missions" target="_blank" style="
+                            display: inline-block;
+                            background: #0f3460;
+                            color: #3498db;
+                            padding: 6px 12px;
+                            border-radius: 4px;
+                            text-decoration: none;
+                            font-weight: bold;
+                        ">→ Click to Create Key</a>
                     </div>
 
                     ${keyInfoHtml}
