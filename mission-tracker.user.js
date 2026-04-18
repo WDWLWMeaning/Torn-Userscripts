@@ -109,8 +109,12 @@
     // ==========================================
     function processMissions(missions) {
         if (!missions || typeof missions !== 'object') {
+            console.log('[Mission Tracker] No missions data or invalid format');
             return { count: 0, urgent: false, warning: false };
         }
+        
+        // Debug: Log what we received
+        console.log('[Mission Tracker] Raw missions data:', missions);
         
         const now = Date.now() / 1000; // Current time in seconds
         let incompleteCount = 0;
@@ -118,14 +122,33 @@
         let hasWarning = false;
         
         for (const [missionId, mission] of Object.entries(missions)) {
-            // Skip if mission is already complete
-            if (mission.completed === 1 || mission.status === 'completed') continue;
+            // Skip if not a valid mission object
+            if (!mission || typeof mission !== 'object') continue;
             
+            // Check various status fields - mission is "done" if completed, expired, or failed
+            const isCompleted = mission.completed === 1 || 
+                               mission.status === 'completed' || 
+                               mission.status === 'expired' ||
+                               mission.status === 'failed';
+            
+            // Skip completed missions
+            if (isCompleted) {
+                console.log(`[Mission Tracker] Skipping completed mission ${missionId}:`, mission.status);
+                continue;
+            }
+            
+            // This mission needs attention (in progress or waiting to accept)
             incompleteCount++;
+            console.log(`[Mission Tracker] Counting incomplete mission ${missionId}:`, {
+                status: mission.status,
+                title: mission.title,
+                deadline: mission.deadline
+            });
             
             // Check deadline if available
             if (mission.deadline) {
                 const hoursRemaining = (mission.deadline - now) / 3600;
+                console.log(`[Mission Tracker] Mission ${missionId} has ${hoursRemaining.toFixed(1)} hours remaining`);
                 
                 if (hoursRemaining > 0 && hoursRemaining <= CONFIG.urgentHours) {
                     hasUrgent = true;
@@ -135,11 +158,14 @@
             }
         }
         
-        return {
+        const result = {
             count: incompleteCount,
             urgent: hasUrgent,
             warning: hasWarning && !hasUrgent // Only warning if not already urgent
         };
+        
+        console.log('[Mission Tracker] Processed result:', result);
+        return result;
     }
 
     // ==========================================
@@ -325,8 +351,14 @@
     // ==========================================
     // Main Logic
     // ==========================================
-    async function refreshMissions() {
+    async function refreshMissions(force = false) {
         try {
+            // Clear cache if forcing refresh
+            if (force) {
+                GM_deleteValue('cache_missions');
+                GM_deleteValue('cache_missions_time');
+            }
+            
             const missions = await TornAPI.fetchMissions();
             const status = processMissions(missions);
             updateBubble(status);
@@ -369,6 +401,11 @@
     // ==========================================
     GM_registerMenuCommand('⚙️ Mission Tracker Settings', showSettings);
     GM_registerMenuCommand('🔄 Refresh Now', refreshMissions);
+    GM_registerMenuCommand('🗑️ Clear Cache', () => {
+        GM_deleteValue('cache_missions');
+        GM_deleteValue('cache_missions_time');
+        alert('Cache cleared! Refresh to get latest data.');
+    });
 
     // ==========================================
     // Start
