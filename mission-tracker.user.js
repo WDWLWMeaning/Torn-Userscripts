@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Mission Tracker
 // @namespace    torn-mission-tracker
-// @version      2.0.5
+// @version      2.0.6
 // @description  Track Torn missions with urgency indicators (red <24h, yellow <48h) via the Torn API v2
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -177,9 +177,10 @@
         bubbleElement = document.createElement('span');
         bubbleElement.id = 'torn-mission-badge';
 
-        const link = missionsNav.querySelector('a');
-        if (link) {
-            link.appendChild(bubbleElement);
+        // Append to the area-row so we can position absolutely within it
+        const areaRow = missionsNav.querySelector('.area-row___iBD8N');
+        if (areaRow) {
+            areaRow.appendChild(bubbleElement);
         }
     }
 
@@ -187,8 +188,12 @@
     function setupMutationObserver() {
         const observer = new MutationObserver(() => {
             const existingBadge = document.getElementById('torn-mission-badge');
-            if (!existingBadge && bubbleElement) {
-                // Badge was removed, recreate it
+            const missionsNav = document.getElementById('nav-missions');
+            
+            // Check if badge is missing or if it's not inside the area-row
+            if (!existingBadge || (missionsNav && !missionsNav.querySelector('.area-row___iBD8N #torn-mission-badge'))) {
+                // Badge was removed or moved, recreate it
+                if (existingBadge) existingBadge.remove();
                 bubbleElement = null;
                 createBubble();
                 // Re-apply current status
@@ -210,7 +215,16 @@
         if (document.getElementById('mission-tracker-styles')) return;
 
         GM_addStyle(`
+            /* Desktop: position badge on the far right, vertically centered */
+            #nav-missions {
+                position: relative;
+            }
+            
             #torn-mission-badge {
+                position: absolute;
+                right: 12px;
+                top: 50%;
+                transform: translateY(-50%);
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
@@ -222,23 +236,17 @@
                 font-size: 11px;
                 font-weight: 700;
                 font-family: Arial, sans-serif;
-                margin-left: 8px;
-                vertical-align: middle;
                 pointer-events: none;
                 user-select: none;
                 line-height: 1;
             }
             
-            /* Mobile: position badge absolutely so it doesn't push layout */
+            /* Mobile: smaller badge, positioned top-right */
             @media (max-width: 768px) {
-                #nav-missions {
-                    position: relative;
-                }
-                #nav-missions #torn-mission-badge {
-                    position: absolute;
-                    top: 2px;
-                    right: 2px;
-                    margin: 0;
+                #torn-mission-badge {
+                    right: 4px;
+                    top: 4px;
+                    transform: none;
                     width: 14px;
                     height: 14px;
                     font-size: 9px;
