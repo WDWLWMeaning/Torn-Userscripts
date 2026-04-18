@@ -1,87 +1,137 @@
-# Torn Userscripts
+# 🎮 Torn Userscripts
 
-A collection of browser extensions and userscripts for [Torn City](https://www.torn.com), updated for the Torn API v2.
+> Browser extensions for [Torn City](https://www.torn.com) — enhanced gameplay, better UI, and API-powered features.
 
-## About
+[![Torn](https://img.shields.io/badge/Torn-API%20v2-blue)](https://www.torn.com/api.html)
+[![Tampermonkey](https://img.shields.io/badge/Tampermonkey-Compatible-green)](https://www.tampermonkey.net/)
+[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
-These userscripts enhance the Torn gameplay experience by adding custom features, automating lightweight tasks, and displaying data from Torn's API.
+---
 
-## Prerequisites
+## 📦 Available Scripts
 
-- [Tampermonkey](https://www.tampermonkey.net/) browser extension (or Greasemonkey/Violentmonkey)
-- A Torn account
-- A Torn API key with the selections your script needs
+### 🔥 Mission Tracker `v2.0.6`
+Track your missions and never miss a deadline again.
 
-## Quick Start
-
-1. Install Tampermonkey for your browser.
-2. Copy a script below into a new Tampermonkey script.
-3. Configure your Torn API key when prompted.
-4. Grant the specific v2 selections the script needs.
-
-## Userscripts
-
-### Boilerplate
-A starter template for building your own Torn extensions on top of the v2 API.
+**What it does:**
+- Shows a badge on the **Missions** button with count of incomplete missions
+- 🔴 **Red badge** = Mission expires in <24 hours (pulses for urgency)
+- 🟡 **Yellow badge** = Mission expires in <48 hours
+- 🔵 **Blue badge** = No urgency
+- Updates every 5 minutes with smart caching
 
 **Features:**
-- Local API key storage
-- Cached API requests
-- Settings panel
-- Notification system
-- Dedicated v2 endpoint helpers
-- Generic selector fallback for endpoints Torn has not split yet
+- ✅ Mobile & desktop responsive
+- ✅ Persists across page navigation
+- ✅ Settings panel with API key validation
+- ✅ Shows your key's access level and permissions
 
-**Install:** Copy the contents of `userscript.js` into a new Tampermonkey script.
+**Install:**
+```
+https://git.er-ic.ca/Kevin/torn-userscripts/-/raw/main/mission-tracker.user.js?ref_type=heads
+```
 
-### Mission Tracker
-Tracks active missions and warns when accepted contracts are close to expiring.
+---
 
-**Features:**
-- Uses `/user/missions`
-- Uses `/key/info` to validate permissions
-- Red badge for <24h, yellow for <48h
-- Five-minute caching to stay polite to Torn's API
+### 🚀 Userscript Boilerplate
+A complete starter template for building your own Torn extensions.
 
-**Install:** Copy the contents of `mission-tracker.user.js` into a new Tampermonkey script.
+**Includes:**
+- 🔐 Secure API key storage (`GM_getValue`/`GM_setValue`)
+- 💾 Smart caching with TTL
+- ⚙️ Settings panel template
+- 🔔 Notification system
+- 📡 Torn API v2 helpers
+- 🎨 Clean UI components
 
-## Torn API v2 notes
+**Use this if:**
+- You want to build a custom Torn tool
+- You need a solid foundation with best practices
+- You want to learn the API v2 patterns
 
-- Base URL: `https://api.torn.com/v2`
-- OpenAPI spec: <https://www.torn.com/swagger/openapi.json>
-- Prefer dedicated endpoints like `/user/missions` and `/key/info`
-- The generic selector endpoints (`/user`, `/faction`, `/market`) still exist, but dedicated v2 paths are cleaner when available
-- Torn's v2 rollout is still in progress, so some older domains may still need selector-based fallbacks
+**Get started:** Copy `userscript.js` and modify the `Features` object.
 
-## Development
+---
 
-### Creating a new script
+## 🛠️ Prerequisites
 
-1. Copy `userscript.js` as a starting point.
-2. Add features through the `Features` object.
-3. Prefer dedicated v2 paths first.
-4. Cache anything that does not need live-second accuracy.
-5. Test on Torn pages before shipping.
+1. **Install Tampermonkey** (Chrome/Firefox/Edge)
+   - [Chrome Web Store](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo)
+   - [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/tampermonkey/)
 
-### Best practices
+2. **Get a Torn API key**
+   - Go to [Torn Preferences → API Keys](https://www.torn.com/preferences.php#tab=api)
+   - Create a new key
+   - Select the required scopes for your script
 
-- **Never hardcode API keys**
-- **Cache aggressively**
-- **Handle missing selections cleanly**
-- **Prefer dedicated v2 endpoints**
-- **Keep everything local unless the user explicitly wants otherwise**
+3. **Install a script**
+   - Click the install link above
+   - Tampermonkey will prompt you to install
+   - Enter your API key when prompted
 
-## Privacy & Security
+---
 
-- API keys are stored locally in the browser
-- No data is sent to external servers
-- All API requests go directly to Torn's servers
-- Scripts are open source, so users can inspect what they do
+## 🧩 API v2 Information
 
-## Resources
+These scripts use the **Torn API v2** for better performance and dedicated endpoints.
 
-- OpenAPI spec: <https://www.torn.com/swagger/openapi.json>
-- Human docs: <https://www.torn.com/api.html>
-- Tampermonkey docs: <https://www.tampermonkey.net/documentation.php>
-- Torn forums: <https://www.torn.com/forums.php>
-- Examples: [examples.md](examples.md)
+**Base URL:** `https://api.torn.com/v2`
+
+**Endpoints used:**
+| Endpoint | Purpose |
+|----------|---------|
+| `/user/missions` | Mission data |
+| `/key/info` | Key validation & permissions |
+| `/user/cooldowns` | Cooldown timers |
+| `/user/money` | Financial data |
+
+**OpenAPI Spec:** https://www.torn.com/swagger/openapi.json
+
+---
+
+## 🔒 Privacy & Security
+
+- ✅ API keys stored **locally** in your browser
+- ✅ No external servers — all requests go directly to Torn
+- ✅ Open source — inspect the code before installing
+- ✅ No data collection or tracking
+
+---
+
+## 📝 Development
+
+Want to contribute or build your own?
+
+1. Fork this repo
+2. Check `examples.md` for patterns and snippets
+3. Use the boilerplate as a starting point
+4. Test on Torn before submitting
+
+**Best practices:**
+- Cache aggressively (respect Torn's servers)
+- Use dedicated v2 endpoints when available
+- Handle errors gracefully
+- Keep UI minimal and non-intrusive
+
+---
+
+## 📚 Resources
+
+- [Torn API Docs](https://www.torn.com/api.html)
+- [OpenAPI Spec](https://www.torn.com/swagger/openapi.json)
+- [Tampermonkey Docs](https://www.tampermonkey.net/documentation.php)
+- [Examples & Patterns](examples.md)
+
+---
+
+## 🤝 Contributing
+
+Found a bug? Want a new feature?
+
+- Open an issue
+- Submit a pull request
+- Or DM me on Torn
+
+---
+
+Made with ☕ for the Torn community
