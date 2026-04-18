@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Mission Tracker
 // @namespace    torn-mission-tracker
-// @version      2.0.1
+// @version      2.0.2
 // @description  Track Torn missions with urgency indicators (red <24h, yellow <48h) via the Torn API v2
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -172,33 +172,76 @@
         if (bubbleElement) return;
 
         const missionsNav = document.getElementById('nav-missions');
-        if (!missionsNav) {
-            bubbleElement = document.createElement('div');
-            bubbleElement.id = 'torn-mission-bubble';
-            document.body.appendChild(bubbleElement);
-            return;
-        }
+        if (!missionsNav) return; // Don't create if missions nav not found
 
         bubbleElement = document.createElement('span');
         bubbleElement.id = 'torn-mission-badge';
 
-        const linkName = missionsNav.querySelector('.linkName___FoKha');
-        if (linkName) {
-            linkName.after(bubbleElement);
-        } else {
-            const link = missionsNav.querySelector('a');
-            if (link) link.appendChild(bubbleElement);
+        const link = missionsNav.querySelector('a');
+        if (link) {
+            link.appendChild(bubbleElement);
         }
     }
 
-    function addPulseStyle() {
-        if (document.getElementById('mission-pulse-style')) return;
+    // Watch for DOM changes to re-add badge if Torn's UI removes it
+    function setupMutationObserver() {
+        const observer = new MutationObserver(() => {
+            const existingBadge = document.getElementById('torn-mission-badge');
+            if (!existingBadge && bubbleElement) {
+                // Badge was removed, recreate it
+                bubbleElement = null;
+                createBubble();
+                // Re-apply current status
+                const cached = Storage.getCache('missions');
+                if (cached) {
+                    const status = processMissions(cached);
+                    updateBubble(status);
+                }
+            }
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
+
+    function addStyles() {
+        if (document.getElementById('mission-tracker-styles')) return;
 
         GM_addStyle(`
+            #torn-mission-badge {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 16px;
+                height: 16px;
+                background: #3498db;
+                color: white;
+                border-radius: 8px;
+                font-size: 10px;
+                font-weight: bold;
+                font-family: 'Segoe UI', Tahoma, sans-serif;
+                margin-left: 6px;
+                padding: 0 4px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+                vertical-align: middle;
+                pointer-events: none;
+                user-select: none;
+            }
+            
+            #torn-mission-badge.mission-urgent {
+                background: #e74c3c;
+                animation: mission-pulse 2s infinite;
+            }
+            
+            #torn-mission-badge.mission-warning {
+                background: #f39c12;
+            }
+            
             @keyframes mission-pulse {
-                0% { transform: scale(1); box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-                50% { transform: scale(1.15); box-shadow: 0 4px 8px rgba(231, 76, 60, 0.5); }
-                100% { transform: scale(1); box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.15); }
             }
         `);
     }
@@ -207,77 +250,25 @@
         if (!bubbleElement) createBubble();
         if (!bubbleElement) return;
 
-        const isSidebarBadge = bubbleElement.id === 'torn-mission-badge';
+        addStyles();
 
         if (status.count === 0) {
             bubbleElement.style.display = 'none';
             return;
         }
 
-        let color;
-        let bgColor;
+        bubbleElement.style.display = 'inline-flex';
+        bubbleElement.textContent = status.count;
+        bubbleElement.title = `${status.count} incomplete mission${status.count !== 1 ? 's' : ''}`;
+
+        // Remove old classes
+        bubbleElement.classList.remove('mission-urgent', 'mission-warning');
+
+        // Add appropriate class
         if (status.urgent) {
-            color = '#e74c3c';
-            bgColor = 'rgba(231, 76, 60, 0.9)';
+            bubbleElement.classList.add('mission-urgent');
         } else if (status.warning) {
-            color = '#f39c12';
-            bgColor = 'rgba(243, 156, 18, 0.9)';
-        } else {
-            color = '#3498db';
-            bgColor = 'rgba(52, 152, 219, 0.9)';
-        }
-
-        if (isSidebarBadge) {
-            bubbleElement.style.cssText = `
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                min-width: 18px;
-                height: 18px;
-                background: ${bgColor};
-                color: white;
-                border-radius: 9px;
-                font-size: 11px;
-                font-weight: bold;
-                font-family: 'Segoe UI', Tahoma, sans-serif;
-                margin-left: 6px;
-                padding: 0 5px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-                transition: transform 0.2s;
-                cursor: pointer;
-            `;
-
-            bubbleElement.textContent = status.count;
-            bubbleElement.title = `${status.count} incomplete mission${status.count !== 1 ? 's' : ''}`;
-            bubbleElement.style.animation = status.urgent ? 'mission-pulse 2s infinite' : '';
-            if (status.urgent) addPulseStyle();
-        } else {
-            bubbleElement.style.cssText = `
-                position: fixed;
-                top: 70px;
-                right: 15px;
-                width: 40px;
-                height: 40px;
-                background: ${color};
-                color: white;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-weight: bold;
-                font-size: 16px;
-                font-family: 'Segoe UI', Tahoma, sans-serif;
-                box-shadow: 0 4px 15px ${color}80;
-                z-index: 9999;
-                cursor: pointer;
-                transition: transform 0.2s, box-shadow 0.2s;
-            `;
-
-            bubbleElement.textContent = status.count;
-            bubbleElement.title = `${status.count} incomplete mission${status.count !== 1 ? 's' : ''}`;
-            bubbleElement.onclick = () => {
-                window.location.href = 'https://www.torn.com/page.php?sid=missions';
-            };
+            bubbleElement.classList.add('mission-warning');
         }
     }
 
@@ -460,6 +451,8 @@
 
         if (updateTimer) clearInterval(updateTimer);
         updateTimer = setInterval(() => refreshMissions(), CONFIG.updateInterval);
+
+        setupMutationObserver();
 
         console.log('[Mission Tracker] Initialized with Torn API v2.');
     }
