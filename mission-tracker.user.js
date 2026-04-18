@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Mission Tracker
 // @namespace    torn-mission-tracker
-// @version      1.0.2
+// @version      1.0.3
 // @description  Track Torn missions with urgency indicators (red <24h, yellow <48h)
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -10,8 +10,8 @@
 // @grant        GM_getValue
 // @grant        GM_registerMenuCommand
 // @grant        GM_addStyle
-// @updateURL    https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/mission-tracker.user.js
-// @downloadURL  https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/mission-tracker.user.js
+// @updateURL    https://git.er-ic.ca/Kevin/torn-userscripts/-/raw/main/mission-tracker.user.js?ref_type=heads
+// @downloadURL  https://git.er-ic.ca/Kevin/torn-userscripts/-/raw/main/mission-tracker.user.js?ref_type=heads
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=torn.com
 // @run-at       document-end
 // ==/UserScript==
