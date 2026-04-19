@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Guard (PDA)
 // @namespace    torn-chain-guard
-// @version      1.5.3
+// @version      1.5.4
 // @description  Prevents accidental attacks when within range of a chain bonus threshold
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -741,9 +741,9 @@
             lastDangerZoneState = inDangerZone;
         }
 
-        if (inDangerZone) {
+        if (inDangerZone && !ignored) {
             createWarningBanner();
-            if (isAttackPage && !ignored) {
+            if (isAttackPage) {
                 blockAttackButtons();
                 updateBlockedButtonLabels();
             } else {
