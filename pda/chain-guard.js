@@ -50,6 +50,7 @@
     let attackButtonObserver = null;
     let blockedAttackButtons = new Set();
     let settingsPanelRef = null;
+    let headerButtonObserver = null;
 
     function log(...args) {
         console.log('[Chain Guard PDA]', ...args);
@@ -257,6 +258,27 @@
             }
             #chain-guard-settings .cg-cancel:hover {
                 color: ${TORN.text};
+            }
+            #chain-guard-header-settings {
+                width: 32px;
+                height: 32px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                background: linear-gradient(to bottom, #3b3b3b, #1f1f1f);
+                border: 1px solid #0f0f0f;
+                border-radius: 6px;
+                color: ${TORN.text};
+                font-size: 16px;
+                line-height: 1;
+                cursor: pointer;
+                box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+                margin-left: 6px;
+                padding: 0;
+            }
+            #chain-guard-header-settings:hover {
+                background: linear-gradient(to bottom, #4a4a4a, #2a2a2a);
+                color: white;
             }
         `;
         document.head.appendChild(style);
@@ -615,10 +637,47 @@
         log('Attack button observer started');
     }
 
+    function ensureHeaderSettingsButton() {
+        const existing = document.getElementById('chain-guard-header-settings');
+        if (existing && existing.isConnected) return true;
+
+        const headerWrapper = document.querySelector('.header-buttons-wrapper');
+        if (!headerWrapper) return false;
+
+        const button = document.createElement('button');
+        button.id = 'chain-guard-header-settings';
+        button.type = 'button';
+        button.title = 'Chain Guard settings';
+        button.setAttribute('aria-label', 'Chain Guard settings');
+        button.textContent = '⚙';
+        button.addEventListener('click', openSettings);
+        headerWrapper.appendChild(button);
+        return true;
+    }
+
+    function ensureHeaderButtonObserver() {
+        if (ensureHeaderSettingsButton()) return;
+        if (headerButtonObserver) return;
+
+        headerButtonObserver = new MutationObserver(() => {
+            if (ensureHeaderSettingsButton() && headerButtonObserver) {
+                headerButtonObserver.disconnect();
+                headerButtonObserver = null;
+            }
+        });
+
+        headerButtonObserver.observe(document.documentElement || document, {
+            subtree: true,
+            childList: true
+        });
+    }
+
     function updateGuard() {
         const isAttackPage = window.location.href.includes('sid=attack');
         const inDangerZone = isInDangerZone();
         const ignored = isGuardIgnored();
+
+        ensureHeaderSettingsButton();
 
         if (lastDangerZoneState !== inDangerZone) {
             log(inDangerZone ? 'Entered danger zone' : 'Exited danger zone');
@@ -711,6 +770,7 @@
         loadChainCache();
         ensureDomObserver();
         ensureAttackButtonObserver();
+        ensureHeaderButtonObserver();
         parseChainFromDOM(true);
 
         let lastUrl = location.href;
