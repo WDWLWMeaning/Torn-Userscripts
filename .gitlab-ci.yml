@@ -1,0 +1,50 @@
+# GitLab CI/CD Pipeline to generate .meta.js files
+# This creates metadata-only files for Tampermonkey update checking
+
+stages:
+  - build
+
+generate-meta:
+  stage: build
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache bash
+  script:
+    - |
+      echo "Generating .meta.js files for Tampermonkey scripts..."
+      
+      # Find all .user.js files in tampermonkey folder
+      for user_script in tampermonkey/*.user.js; do
+        if [ -f "$user_script" ]; then
+          # Get the base name without .user.js
+          base_name=$(basename "$user_script" .user.js)
+          meta_file="tampermonkey/${base_name}.meta.js"
+          
+          echo "Processing: $user_script -> $meta_file"
+          
+          # Extract the metadata block (from ==UserScript== to ==/UserScript==)
+          awk '
+            /^\/\/ ==UserScript==$/ { printing = 1 }
+            printing { print }
+            /^\/\/ ==\/UserScript==$/ { printing = 0; exit }
+          ' "$user_script" > "$meta_file"
+          
+          if [ -s "$meta_file" ]; then
+            echo "  ✓ Created $meta_file"
+          else
+            echo "  ✗ Failed to extract metadata from $user_script"
+            rm -f "$meta_file"
+          fi
+        fi
+      done
+      
+      echo ""
+      echo "Meta file generation complete!"
+      ls -la tampermonkey/*.meta.js 2>/dev/null || echo "No .meta.js files generated"
+  artifacts:
+    paths:
+      - tampermonkey/*.meta.js
+    expire_in: 1 week
+  only:
+    - main
+    - merge_requests

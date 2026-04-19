@@ -11,8 +11,8 @@
 // @grant        GM_deleteValue
 // @grant        GM_registerMenuCommand
 // @grant        GM_addStyle
-// @updateURL    https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/mission-tracker.user.js
-// @downloadURL  https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/mission-tracker.user.js
+// @updateURL    https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/tampermonkey/mission-tracker.meta.js
+// @downloadURL  https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/tampermonkey/mission-tracker.user.js
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=torn.com
 // @run-at       document-end
 // ==/UserScript==
