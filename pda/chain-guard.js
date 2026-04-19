@@ -17,6 +17,7 @@
         BONUS_THRESHOLDS: [10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000],
         DOM_CHAIN_SELECTOR: '.bar-value___uxnah',
         SIDEBAR_CHAIN_FALLBACK_SELECTORS: [
+            '[class*="chain-bar"]',
             '.bar-value___uxnah',
             '[class*="bar-value"]',
             '[class*="chain"] [class*="bar"]',
@@ -73,6 +74,14 @@
     let lastPollMode = null;
     let lastMissingChainLogKey = null;
     let lastDebugOverlayText = '';
+    let debugState = {
+        status: 'Running',
+        currentUrl: window.location.href,
+        pollMode: 'sidebar',
+        searchResults: [],
+        lastParsed: null,
+        lastMessage: 'Waiting for DOM...'
+    };
 
     function log(...args) {
         console.log('[Chain Guard PDA]', ...args);
@@ -304,18 +313,40 @@
             }
             #${CONFIG.DEBUG_OVERLAY_ID} {
                 position: fixed;
-                left: 8px;
-                bottom: 8px;
+                right: 12px;
+                bottom: 12px;
+                width: min(360px, calc(100vw - 24px));
+                max-height: min(45vh, 420px);
+                overflow: auto;
                 z-index: 10000000;
-                max-width: min(92vw, 420px);
-                background: rgba(0, 0, 0, 0.9);
-                color: #7CFC8A;
-                border: 1px solid rgba(124, 252, 138, 0.45);
+                background: rgba(18, 18, 18, 0.96);
+                color: ${TORN.text};
+                border: 1px solid ${TORN.border};
                 border-radius: 6px;
-                padding: 8px 10px;
-                font: 12px/1.4 monospace;
+                padding: 10px 12px;
+                font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
                 white-space: pre-wrap;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+                box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+            }
+            #${CONFIG.DEBUG_OVERLAY_ID} .cg-debug-title {
+                color: ${TORN.blue};
+                font-weight: bold;
+                margin-bottom: 8px;
+            }
+            #${CONFIG.DEBUG_OVERLAY_ID} .cg-debug-section {
+                margin-top: 8px;
+            }
+            #${CONFIG.DEBUG_OVERLAY_ID} .cg-debug-label {
+                color: ${TORN.textMuted};
+            }
+            #${CONFIG.DEBUG_OVERLAY_ID} .cg-debug-ok {
+                color: ${TORN.green};
+            }
+            #${CONFIG.DEBUG_OVERLAY_ID} .cg-debug-warn {
+                color: ${TORN.yellow};
+            }
+            #${CONFIG.DEBUG_OVERLAY_ID} .cg-debug-bad {
+                color: ${TORN.red};
             }
         `;
         document.head.appendChild(style);
@@ -331,7 +362,33 @@
         return overlay;
     }
 
-    function setDebugOverlay(message) {
+    function formatDebugValue(value) {
+        if (value === null || value === undefined || value === '') return 'n/a';
+        if (typeof value === 'string') return value;
+        try {
+            return JSON.stringify(value);
+        } catch {
+            return String(value);
+        }
+    }
+
+    function escapeDebugHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
+    function updateDebugState(patch = {}) {
+        debugState = {
+            ...debugState,
+            ...patch,
+            currentUrl: window.location.href
+        };
+        renderDebugOverlay();
+    }
+
+    function renderDebugOverlay() {
         const settings = loadSettings();
         const overlay = document.getElementById(CONFIG.DEBUG_OVERLAY_ID);
 
@@ -341,24 +398,47 @@
             return;
         }
 
-        const nextText = String(message || '').trim();
-        if (!nextText || nextText === lastDebugOverlayText) return;
+        const statusClass = debugState.status === 'Chain found'
+            ? 'cg-debug-ok'
+            : debugState.status === 'Chain NOT found'
+                ? 'cg-debug-bad'
+                : 'cg-debug-warn';
+        const searchResults = (debugState.searchResults || []).map((result) => {
+            const outcomeClass = result.found ? 'cg-debug-ok' : 'cg-debug-label';
+            const outcome = result.found ? `FOUND ${result.matchText || ''}`.trim() : 'no match';
+            return `${escapeDebugHtml(result.scope || 'search')}: ${escapeDebugHtml(result.selector)} (${escapeDebugHtml(formatDebugValue(result.matchCount))} nodes) → <span class="${outcomeClass}">${escapeDebugHtml(outcome)}</span>`;
+        }).join('<br>') || '<span class="cg-debug-label">No selectors tried yet</span>';
 
-        ensureDebugOverlay().textContent = nextText;
-        lastDebugOverlayText = nextText;
+        const lastParsed = debugState.lastParsed
+            ? `amount=${escapeDebugHtml(formatDebugValue(debugState.lastParsed.amount))}, max=${escapeDebugHtml(formatDebugValue(debugState.lastParsed.max))}, source=${escapeDebugHtml(formatDebugValue(debugState.lastParsed.source))}${debugState.lastParsed.selector ? `, selector=${escapeDebugHtml(debugState.lastParsed.selector)}` : ''}`
+            : '<span class="cg-debug-label">No parsed chain yet</span>';
+        const chainStateText = escapeDebugHtml(JSON.stringify(chainState));
+        const messageText = escapeDebugHtml(debugState.lastMessage || '');
+        const nextHtml = `
+            <div class="cg-debug-title">Chain Guard Debug</div>
+            <div><span class="cg-debug-label">Script status:</span> <span class="${statusClass}">${escapeDebugHtml(debugState.status)}</span></div>
+            <div><span class="cg-debug-label">Current URL:</span> ${escapeDebugHtml(debugState.currentUrl)}</div>
+            <div><span class="cg-debug-label">Poll mode:</span> ${escapeDebugHtml(debugState.pollMode || 'unknown')}</div>
+            <div class="cg-debug-section"><span class="cg-debug-label">Element search results:</span><br>${searchResults}</div>
+            <div class="cg-debug-section"><span class="cg-debug-label">Last parsed chain data:</span><br>${lastParsed}</div>
+            <div class="cg-debug-section"><span class="cg-debug-label">Current chain state:</span><br>${chainStateText}</div>
+            <div class="cg-debug-section"><span class="cg-debug-label">Last message:</span><br>${messageText || '<span class="cg-debug-label">n/a</span>'}</div>
+        `;
+
+        if (nextHtml === lastDebugOverlayText) return;
+
+        ensureDebugOverlay().innerHTML = nextHtml;
+        lastDebugOverlayText = nextHtml;
+    }
+
+    function setDebugOverlay(message) {
+        updateDebugState({ lastMessage: String(message || '').trim() || 'n/a' });
     }
 
     function logDebug(...args) {
         if (loadSettings().debugMode) {
             log(...args);
-            const debugText = args.map((arg) => {
-                if (typeof arg === 'string') return arg;
-                try {
-                    return JSON.stringify(arg);
-                } catch {
-                    return String(arg);
-                }
-            }).join(' ');
+            const debugText = args.map((arg) => formatDebugValue(arg)).join(' ');
             setDebugOverlay(debugText);
         }
     }
@@ -386,6 +466,14 @@
                     ...data,
                     source: data.source === 'dom' ? 'dom' : 'cache'
                 };
+                updateDebugState({
+                    lastParsed: {
+                        amount: chainState.amount,
+                        max: chainState.max,
+                        source: chainState.source,
+                        selector: 'cache'
+                    }
+                });
                 log('Loaded cached chain:', chainState.amount, '/', chainState.max, 'source:', chainState.source);
             }
         } catch {
@@ -419,6 +507,14 @@
         chainState.max = normalizedMax;
         chainState.bonuses = normalizedBonuses;
         chainState.source = normalizedSource;
+        updateDebugState({
+            lastParsed: {
+                amount,
+                max: normalizedMax,
+                source: normalizedSource,
+                selector: debugState.lastParsed?.selector || normalizedSource
+            }
+        });
 
         if (ignoredBonusThreshold !== null && chainState.amount >= chainState.max) {
             logDebug('Ignore state reset, chain bonus reached at threshold:', ignoredBonusThreshold, 'current chain:', chainState.amount, '/', chainState.max);
@@ -447,38 +543,50 @@
         return Math.round(base * multiplier);
     }
 
-    function findAttackChainElement() {
-        for (const selector of CONFIG.ATTACK_CHAIN_FALLBACK_SELECTORS) {
+    function findChainElement(selectors, { scope, isCandidate }) {
+        const searchResults = [];
+
+        for (const selector of selectors) {
             const matches = [...document.querySelectorAll(selector)];
-            if (!matches.length) continue;
-
-            for (const el of matches) {
-                const text = el.textContent?.trim() || '';
-                if (!/\d/.test(text)) continue;
-                if (/\d+\s*[:]\s*\d+/.test(text) || /chain/i.test(text) || /\d+(?:\.\d+)?\s*[kmb]?/i.test(text)) {
-                    return { el, selector, text };
-                }
-            }
-        }
-
-        return null;
-    }
-
-    function findSidebarChainElement() {
-        for (const selector of CONFIG.SIDEBAR_CHAIN_FALLBACK_SELECTORS) {
-            const matches = [...document.querySelectorAll(selector)];
-            if (!matches.length) continue;
+            let foundMatch = null;
 
             for (const el of matches) {
                 const text = el.textContent?.trim() || '';
                 if (!text) continue;
-                if (/\//.test(text) && /\d/.test(text)) {
-                    return { el, selector, text };
+                if (isCandidate(text, el)) {
+                    foundMatch = { el, selector, text };
+                    break;
                 }
+            }
+
+            searchResults.push({
+                scope,
+                selector,
+                found: Boolean(foundMatch),
+                matchText: foundMatch?.text ? foundMatch.text.slice(0, 80) : '',
+                matchCount: matches.length
+            });
+
+            if (foundMatch) {
+                return { match: foundMatch, searchResults };
             }
         }
 
-        return null;
+        return { match: null, searchResults };
+    }
+
+    function findAttackChainElement() {
+        return findChainElement(CONFIG.ATTACK_CHAIN_FALLBACK_SELECTORS, {
+            scope: 'attack',
+            isCandidate: (text) => /\d/.test(text) && (/\d+\s*[:]\s*\d+/.test(text) || /chain/i.test(text) || /\d+(?:\.\d+)?\s*[kmb]?/i.test(text))
+        });
+    }
+
+    function findSidebarChainElement() {
+        return findChainElement(CONFIG.SIDEBAR_CHAIN_FALLBACK_SELECTORS, {
+            scope: 'sidebar',
+            isCandidate: (text) => /\//.test(text) && /\d/.test(text)
+        });
     }
 
     function parseAttackPageChain(el, selector = CONFIG.ATTACK_CHAIN_SELECTOR) {
@@ -526,55 +634,71 @@
 
     function parseChainFromDOM(force = false) {
         const isAttackPage = window.location.href.includes('sid=attack');
-        const attackMatch = isAttackPage ? findAttackChainElement() : null;
-        const sidebarMatch = findSidebarChainElement();
+        const attackSearch = isAttackPage ? findAttackChainElement() : { match: null, searchResults: [] };
+        const sidebarSearch = findSidebarChainElement();
+        const combinedSearchResults = [...attackSearch.searchResults, ...sidebarSearch.searchResults];
 
-        if (isAttackPage) {
-            if (attackMatch) {
-                const parsed = parseAttackPageChain(attackMatch.el, attackMatch.selector);
-                if (parsed) {
-                    const observedText = `attack:${parsed.selector}:${parsed.text}`;
-                    if (!force && observedText === lastObservedChainText) {
-                        return false;
+        updateDebugState({
+            pollMode: isAttackPage ? 'attack' : 'sidebar',
+            searchResults: combinedSearchResults,
+            status: 'Running'
+        });
+
+        if (isAttackPage && attackSearch.match) {
+            const parsed = parseAttackPageChain(attackSearch.match.el, attackSearch.match.selector);
+            if (parsed) {
+                const observedText = `attack:${parsed.selector}:${parsed.text}`;
+                updateDebugState({
+                    status: 'Chain found',
+                    lastParsed: {
+                        amount: parsed.amount,
+                        max: parsed.max,
+                        source: 'dom',
+                        selector: parsed.selector
                     }
-
-                    lastObservedChainText = observedText;
-                    lastMissingChainLogKey = null;
-                    logDebug('Attack DOM parse success via', parsed.selector + ':', parsed.text, '=>', parsed.amount, '/', parsed.max, parsed.timerText ? `timer ${parsed.timerText}` : '');
-                    return applyChainState(parsed.amount, parsed.max, chainState.bonuses, 'dom');
+                });
+                if (!force && observedText === lastObservedChainText) {
+                    return false;
                 }
+
+                lastObservedChainText = observedText;
+                lastMissingChainLogKey = null;
+                logDebug('Attack DOM parse success via', parsed.selector + ':', parsed.text, '=>', parsed.amount, '/', parsed.max, parsed.timerText ? `timer ${parsed.timerText}` : '');
+                return applyChainState(parsed.amount, parsed.max, chainState.bonuses, 'dom');
             }
+        }
 
-            const fallbackKey = `attack-missing:${window.location.href}`;
-            if (lastMissingChainLogKey !== fallbackKey) {
-                lastMissingChainLogKey = fallbackKey;
-                logDebug('Attack page chain element not found. Tried selectors:', CONFIG.ATTACK_CHAIN_FALLBACK_SELECTORS.join(', '));
+        if (sidebarSearch.match?.el) {
+            const parsed = parseSidebarChain(sidebarSearch.match.el);
+            if (parsed) {
+                const observedText = `sidebar:${parsed.text}`;
+                updateDebugState({
+                    status: 'Chain found',
+                    lastParsed: {
+                        amount: parsed.amount,
+                        max: parsed.max,
+                        source: 'dom',
+                        selector: sidebarSearch.match.selector
+                    }
+                });
+                if (!force && observedText === lastObservedChainText) {
+                    return false;
+                }
+
+                lastObservedChainText = observedText;
+                lastMissingChainLogKey = null;
+                logDebug('Sidebar DOM parse success via', sidebarSearch.match.selector + ':', parsed.text, '=>', parsed.amount, '/', parsed.max);
+                return applyChainState(parsed.amount, parsed.max, chainState.bonuses, 'dom');
             }
         }
 
-        if (!sidebarMatch?.el) {
-            const missingKey = `${isAttackPage ? 'attack' : 'sidebar'}:missing:${window.location.href}`;
-            if (lastMissingChainLogKey !== missingKey) {
-                lastMissingChainLogKey = missingKey;
-                logDebug('DOM parse skipped, sidebar chain element not found for mode:', isAttackPage ? 'attack' : 'sidebar', 'selectors:', CONFIG.SIDEBAR_CHAIN_FALLBACK_SELECTORS.join(', '));
-            }
-            return false;
+        const missingKey = `${isAttackPage ? 'attack' : 'sidebar'}:missing:${window.location.href}`;
+        updateDebugState({ status: 'Chain NOT found' });
+        if (lastMissingChainLogKey !== missingKey) {
+            lastMissingChainLogKey = missingKey;
+            logDebug('DOM parse could not find a chain element for mode:', isAttackPage ? 'attack' : 'sidebar');
         }
-
-        const parsed = parseSidebarChain(sidebarMatch.el);
-        if (!parsed) {
-            return false;
-        }
-
-        const observedText = `sidebar:${parsed.text}`;
-        if (!force && observedText === lastObservedChainText) {
-            return false;
-        }
-
-        lastObservedChainText = observedText;
-        lastMissingChainLogKey = null;
-        logDebug('Sidebar DOM parse success via', sidebarMatch.selector + ':', parsed.text, '=>', parsed.amount, '/', parsed.max);
-        return applyChainState(parsed.amount, parsed.max, chainState.bonuses, 'dom');
+        return false;
     }
 
     function isInDangerZone() {
