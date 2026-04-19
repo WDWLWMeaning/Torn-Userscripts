@@ -59,19 +59,25 @@
 
     let lastDangerZoneState = null;
     let domObserver = null;
-    let ignoreProtectionUntil = 0;
+    let ignoredBonusThreshold = null;
 
     function log(...args) {
         console.log('[Chain Guard]', ...args);
+    }
+
+    function logDebug(...args) {
+        if (loadSettings().debugMode) {
+            log(...args);
+        }
     }
 
     // Load settings
     function loadSettings() {
         const saved = GM_getValue(CONFIG.SETTINGS_KEY, '{}');
         try {
-            return { threshold: CONFIG.DEFAULT_THRESHOLD, ...JSON.parse(saved) };
+            return { threshold: CONFIG.DEFAULT_THRESHOLD, debugMode: false, ...JSON.parse(saved) };
         } catch {
-            return { threshold: CONFIG.DEFAULT_THRESHOLD };
+            return { threshold: CONFIG.DEFAULT_THRESHOLD, debugMode: false };
         }
     }
 
@@ -113,6 +119,12 @@
         chainState.max = normalizedMax;
         chainState.bonuses = Number.isFinite(bonuses) ? bonuses : chainState.bonuses;
         chainState.source = source;
+
+        if (ignoredBonusThreshold !== null && chainState.amount >= chainState.max) {
+            logDebug('Ignore state reset, chain bonus reached at threshold:', ignoredBonusThreshold, 'current chain:', chainState.amount, '/', chainState.max);
+            ignoredBonusThreshold = null;
+        }
+
         saveChainCache();
         log('Chain updated from', source + ':', chainState.amount, '/', chainState.max);
         updateGuard();
@@ -124,7 +136,7 @@
         try {
             const chain = data?.push?.pub?.data?.message?.namespaces?.sidebar?.actions?.updateChain?.chain;
             if (!chain) {
-                log('WebSocket payload did not contain chain data');
+                logDebug('WebSocket payload did not contain chain data');
                 return false;
             }
 
@@ -132,15 +144,17 @@
             const max = parseInt(chain.max, 10);
             const bonuses = parseFloat(chain.bonuses);
 
+            logDebug('WebSocket chain data parsed:', { amount, max, bonuses });
+
             if (applyChainState(amount, max, bonuses, 'websocket')) {
-                log('WebSocket chain parse success');
+                logDebug('WebSocket chain parse success');
                 return true;
             }
 
-            log('WebSocket chain parse failed, invalid amount:', chain.amount);
+            logDebug('WebSocket chain parse failed, invalid amount:', chain.amount);
             return false;
         } catch (e) {
-            log('WebSocket chain parse error:', e);
+            logDebug('WebSocket chain parse error:', e);
             return false;
         }
     }
@@ -158,25 +172,25 @@
     function parseChainFromDOM() {
         const el = document.querySelector(CONFIG.DOM_CHAIN_SELECTOR);
         if (!el) {
-            log('DOM parse skipped, chain element not found');
+            logDebug('DOM parse skipped, chain element not found');
             return false;
         }
 
         const text = el.textContent.trim();
         const match = text.match(/([^/]+)\s*\/\s*([^\s]+)/);
         if (!match) {
-            log('DOM parse failed, unexpected text:', text);
+            logDebug('DOM parse failed, unexpected text:', text);
             return false;
         }
 
         const amount = parseCompactNumber(match[1]);
         const max = parseCompactNumber(match[2]);
         if (!Number.isFinite(amount) || !Number.isFinite(max)) {
-            log('DOM parse failed, invalid values:', text);
+            logDebug('DOM parse failed, invalid values:', text);
             return false;
         }
 
-        log('DOM parse success:', text, '=>', amount, '/', max);
+        logDebug('DOM parse success:', text, '=>', amount, '/', max);
         return applyChainState(amount, max, chainState.bonuses, 'dom');
     }
 
@@ -198,19 +212,19 @@
         log('Hooking WebSocket interceptor');
 
         window.WebSocket = function(url, protocols) {
-            log('WebSocket constructed:', url);
+            logDebug('WebSocket constructed:', url);
             const ws = new OriginalWebSocket(url, protocols);
 
             ws.addEventListener('message', (event) => {
-                log('WebSocket message received');
+                logDebug('WebSocket message received');
                 try {
                     const data = JSON.parse(event.data);
                     const parsed = parseChainData(data);
                     if (!parsed) {
-                        log('WebSocket message parsed as JSON, but no usable chain update found');
+                        logDebug('WebSocket message parsed as JSON, but no usable chain update found');
                     }
                 } catch (error) {
-                    log('WebSocket message JSON parse failed:', error);
+                    logDebug('WebSocket message JSON parse failed:', error);
                 }
             });
 
@@ -296,8 +310,8 @@
             `);
 
             banner.querySelector('.cg-ignore').addEventListener('click', () => {
-                ignoreProtectionUntil = Date.now() + 5000;
-                log('Protection temporarily ignored for current attack');
+                ignoredBonusThreshold = chainState.max;
+                logDebug('Ignore clicked, protection disabled until next bonus threshold:', ignoredBonusThreshold);
                 updateGuard();
             });
 
@@ -320,7 +334,7 @@
     }
 
     function isGuardIgnored() {
-        return Date.now() < ignoreProtectionUntil;
+        return ignoredBonusThreshold !== null && chainState.amount < ignoredBonusThreshold;
     }
 
     function findAttackButtons() {
@@ -369,7 +383,7 @@
     // Prevent attack click
     function preventAttack(e) {
         if (isInDangerZone() && !isGuardIgnored()) {
-            log('Attack blocked,', getDistanceToBonus(), 'attacks away from bonus');
+            logDebug('Attack blocked/intercepted,', getDistanceToBonus(), 'attacks away from bonus');
             e.preventDefault();
             e.stopPropagation();
             alert(`Chain Guard: You are only ${getDistanceToBonus()} attacks away from a chain bonus!\n\nClick Ignore once in the warning banner if you really want to attack.`);
@@ -404,7 +418,7 @@
 
         domObserver = new MutationObserver(() => {
             if (parseChainFromDOM()) {
-                log('DOM fallback observer applied chain update');
+                logDebug('DOM fallback observer applied chain update');
             }
         });
 
@@ -462,6 +476,12 @@
                     <div class="cg-field">
                         <label>Warning Threshold (attacks from bonus)</label>
                         <input type="number" id="cg-threshold" value="${settings.threshold}" min="1" max="100">
+                    </div>
+                    <div class="cg-field cg-checkbox-field">
+                        <label>
+                            <input type="checkbox" id="cg-debug-mode" ${settings.debugMode ? 'checked' : ''}>
+                            Enable Debug Mode
+                        </label>
                     </div>
                     <div class="cg-info">
                         <p>Current chain: <strong>${chainState.amount}</strong> / ${chainState.max}</p>
@@ -548,6 +568,18 @@
                 font-size: 14px;
                 box-sizing: border-box;
             }
+            #chain-guard-settings .cg-checkbox-field label {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                color: ${TORN.text};
+                cursor: pointer;
+            }
+            #chain-guard-settings .cg-checkbox-field input {
+                width: auto;
+                padding: 0;
+                margin: 0;
+            }
             #chain-guard-settings .cg-info {
                 background: ${TORN.panel};
                 padding: 12px;
@@ -595,9 +627,10 @@
         panel.querySelector('.cg-overlay').onclick = () => panel.remove();
         panel.querySelector('.cg-save').onclick = () => {
             const threshold = parseInt(panel.querySelector('#cg-threshold').value, 10);
+            const debugMode = panel.querySelector('#cg-debug-mode').checked;
             if (threshold > 0) {
-                saveSettings({ threshold });
-                log('Settings saved:', threshold);
+                saveSettings({ threshold, debugMode });
+                log('Settings saved:', { threshold, debugMode });
                 updateGuard();
             }
             panel.remove();
@@ -624,7 +657,6 @@
             const url = location.href;
             if (url !== lastUrl) {
                 lastUrl = url;
-                ignoreProtectionUntil = 0;
                 log('URL changed, refreshing guard state:', url);
                 parseChainFromDOM();
                 updateGuard();
