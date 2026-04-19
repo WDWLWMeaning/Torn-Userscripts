@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Guard (PDA)
 // @namespace    torn-chain-guard
-// @version      1.5.6
+// @version      1.5.7
 // @description  Prevents accidental attacks when within range of a chain bonus threshold
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -583,10 +583,73 @@
     }
 
     function findSidebarChainElement() {
-        return findChainElement(CONFIG.SIDEBAR_CHAIN_FALLBACK_SELECTORS, {
-            scope: 'sidebar',
-            isCandidate: (text) => /\//.test(text) && /\d/.test(text)
+        const searchResults = [];
+
+        const getNearbyChainText = (el) => {
+            if (!el) return '';
+            const candidates = [
+                el,
+                el.closest('a, [class*="chain"], [href*="chain"]'),
+                el.parentElement,
+                el.closest('li, div, section, article')
+            ].filter(Boolean);
+
+            return candidates
+                .map((node) => node.textContent?.trim() || '')
+                .join(' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        };
+
+        const isChainLink = (el) => el?.matches?.('a[class*="chain-bar"], a[href*="chain"]');
+        const hasChainContext = (el) => /chain\s*:/i.test(getNearbyChainText(el)) || /\bchain\b/i.test(getNearbyChainText(el));
+
+        const findMatch = (scope, selector, matcher) => {
+            const matches = [...document.querySelectorAll(selector)];
+            let foundMatch = null;
+
+            for (const el of matches) {
+                const text = el.textContent?.trim() || '';
+                if (!text) continue;
+                if (matcher(el, text)) {
+                    foundMatch = { el, selector, text };
+                    break;
+                }
+            }
+
+            searchResults.push({
+                scope: 'sidebar',
+                selector,
+                found: Boolean(foundMatch),
+                matchText: foundMatch?.text ? foundMatch.text.slice(0, 80) : '',
+                matchCount: matches.length
+            });
+
+            return foundMatch;
+        };
+
+        const directLinkMatch = findMatch('sidebar', 'a[class*="chain-bar"], a[href*="chain"]', (el, text) => {
+            return /\d/.test(text) && (isChainLink(el) || hasChainContext(el));
         });
+        if (directLinkMatch) {
+            return { match: directLinkMatch, searchResults };
+        }
+
+        const labelMatch = findMatch('sidebar', 'a, div, span, p, strong', (el, text) => {
+            return /chain\s*:/i.test(text) && /\d/.test(text) && (isChainLink(el) || hasChainContext(el));
+        });
+        if (labelMatch) {
+            return { match: labelMatch, searchResults };
+        }
+
+        const barValueMatch = findMatch('sidebar', '.bar-value___uxnah', (el, text) => {
+            return /\//.test(text) && /\d/.test(text) && (isChainLink(el.closest('a')) || hasChainContext(el));
+        });
+        if (barValueMatch) {
+            return { match: barValueMatch, searchResults };
+        }
+
+        return { match: null, searchResults };
     }
 
     function parseAttackPageChain(el, selector = CONFIG.ATTACK_CHAIN_SELECTOR) {
