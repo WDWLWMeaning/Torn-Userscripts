@@ -3,12 +3,13 @@
 
 stages:
   - build
+  - deploy
 
 generate-meta:
   stage: build
   image: alpine:latest
   before_script:
-    - apk add --no-cache bash
+    - apk add --no-cache bash git
   script:
     - |
       echo "Generating .meta.js files for Tampermonkey scripts..."
@@ -47,4 +48,31 @@ generate-meta:
     expire_in: 1 week
   only:
     - main
-    - merge_requests
+
+commit-meta:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache git openssh-client
+    - git config --global user.email "ci@git.er-ic.ca"
+    - git config --global user.name "GitLab CI"
+  script:
+    - |
+      echo "Committing generated meta files..."
+      
+      # Setup git to push back to repo
+      git remote set-url origin "https://oauth2:${GITLAB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+      
+      # Check if there are changes to commit
+      if [ -n "$(git status --porcelain tampermonkey/*.meta.js 2>/dev/null)" ]; then
+        git add tampermonkey/*.meta.js
+        git commit -m "CI: Update meta files [skip ci]"
+        git push origin HEAD:${CI_COMMIT_REF_NAME}
+        echo "✓ Meta files committed and pushed"
+      else
+        echo "No changes to meta files"
+      fi
+  only:
+    - main
+  dependencies:
+    - generate-meta
