@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Guard
 // @namespace    torn-chain-guard
-// @version      1.5.0
+// @version      1.5.1
 // @description  Prevents accidental attacks when within range of a chain bonus threshold
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -31,7 +31,8 @@
         CACHE_KEY: 'chain_guard_data',
         SETTINGS_KEY: 'chain_guard_settings',
         BONUS_THRESHOLDS: [10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000],
-        DOM_CHAIN_SELECTOR: '.bar-value___uxnah'
+        DOM_CHAIN_SELECTOR: '.bar-value___uxnah',
+        ATTACK_CHAIN_SELECTOR: '.labelTitle___ZtfnD'
     };
 
     // Torn-native color palette
@@ -167,19 +168,58 @@
         return Math.round(base * multiplier);
     }
 
+    function parseAttackPageChain(el) {
+        if (!el) return null;
+
+        const amountText = el.querySelector('span')?.textContent?.trim() || '';
+        const amount = parseCompactNumber(amountText);
+        if (!Number.isFinite(amount)) {
+            return null;
+        }
+
+        return {
+            amount,
+            max: getNextBonus(amount) || chainState.max || 1000,
+            text: el.textContent.trim()
+        };
+    }
+
     function parseChainFromDOM(force = false) {
-        const el = document.querySelector(CONFIG.DOM_CHAIN_SELECTOR);
+        const isAttackPage = window.location.href.includes('sid=attack');
+        const attackEl = isAttackPage ? document.querySelector(CONFIG.ATTACK_CHAIN_SELECTOR) : null;
+        const sidebarEl = document.querySelector(CONFIG.DOM_CHAIN_SELECTOR);
+        const el = attackEl || sidebarEl;
+        const sourceType = attackEl ? 'attack' : 'sidebar';
+
         if (!el) {
             logDebug('DOM parse skipped, chain element not found');
             return false;
         }
 
-        const text = el.textContent.trim();
-        if (!force && text === lastObservedChainText) {
+        if (attackEl) {
+            const parsed = parseAttackPageChain(attackEl);
+            if (!parsed) {
+                logDebug('Attack DOM parse failed, unexpected text:', attackEl.textContent.trim());
+                return false;
+            }
+
+            const observedText = `${sourceType}:${parsed.text}`;
+            if (!force && observedText === lastObservedChainText) {
+                return false;
+            }
+
+            lastObservedChainText = observedText;
+            logDebug('Attack DOM parse success:', parsed.text, '=>', parsed.amount, '/', parsed.max);
+            return applyChainState(parsed.amount, parsed.max, chainState.bonuses, 'dom');
+        }
+
+        const text = sidebarEl.textContent.trim();
+        const observedText = `${sourceType}:${text}`;
+        if (!force && observedText === lastObservedChainText) {
             return false;
         }
 
-        lastObservedChainText = text;
+        lastObservedChainText = observedText;
         const match = text.match(/([^/]+)\s*\/\s*([^\s]+)/);
         if (!match) {
             logDebug('DOM parse failed, unexpected text:', text);
@@ -457,9 +497,13 @@
         if (domObserver) return;
 
         domObserver = new MutationObserver(() => {
-            const el = document.querySelector(CONFIG.DOM_CHAIN_SELECTOR);
+            const isAttackPage = window.location.href.includes('sid=attack');
+            const attackEl = isAttackPage ? document.querySelector(CONFIG.ATTACK_CHAIN_SELECTOR) : null;
+            const sidebarEl = document.querySelector(CONFIG.DOM_CHAIN_SELECTOR);
+            const el = attackEl || sidebarEl;
+            const sourceType = attackEl ? 'attack' : 'sidebar';
             const text = el?.textContent?.trim();
-            if (!text || text === lastObservedChainText) return;
+            if (!text || `${sourceType}:${text}` === lastObservedChainText) return;
             scheduleDomParse();
         });
 
