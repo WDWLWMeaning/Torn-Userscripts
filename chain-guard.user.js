@@ -60,6 +60,10 @@
     let lastDangerZoneState = null;
     let domObserver = null;
     let ignoredBonusThreshold = null;
+    let lastLoggedChainKey = null;
+    let lastObservedChainText = null;
+    let domParseTimeout = null;
+    let lastDomParseAt = 0;
 
     function log(...args) {
         console.log('[Chain Guard]', ...args);
@@ -115,9 +119,17 @@
         if (!Number.isFinite(amount)) return false;
 
         const normalizedMax = Number.isFinite(max) && max > 0 ? max : (getNextBonus(amount) || 1000);
+        const normalizedBonuses = Number.isFinite(bonuses) ? bonuses : chainState.bonuses;
+        const hasChanged = chainState.amount !== amount || chainState.max !== normalizedMax || chainState.bonuses !== normalizedBonuses;
+
+        if (!hasChanged) {
+            chainState.source = source;
+            return false;
+        }
+
         chainState.amount = amount;
         chainState.max = normalizedMax;
-        chainState.bonuses = Number.isFinite(bonuses) ? bonuses : chainState.bonuses;
+        chainState.bonuses = normalizedBonuses;
         chainState.source = source;
 
         if (ignoredBonusThreshold !== null && chainState.amount >= chainState.max) {
@@ -126,7 +138,13 @@
         }
 
         saveChainCache();
-        log('Chain updated from', source + ':', chainState.amount, '/', chainState.max);
+
+        const chainKey = `${chainState.amount}/${chainState.max}`;
+        if (lastLoggedChainKey !== chainKey) {
+            lastLoggedChainKey = chainKey;
+            log('Chain updated from', source + ':', chainState.amount, '/', chainState.max);
+        }
+
         updateGuard();
         return true;
     }
@@ -169,7 +187,7 @@
         return Math.round(base * multiplier);
     }
 
-    function parseChainFromDOM() {
+    function parseChainFromDOM(force = false) {
         const el = document.querySelector(CONFIG.DOM_CHAIN_SELECTOR);
         if (!el) {
             logDebug('DOM parse skipped, chain element not found');
@@ -177,6 +195,11 @@
         }
 
         const text = el.textContent.trim();
+        if (!force && text === lastObservedChainText) {
+            return false;
+        }
+
+        lastObservedChainText = text;
         const match = text.match(/([^/]+)\s*\/\s*([^\s]+)/);
         if (!match) {
             logDebug('DOM parse failed, unexpected text:', text);
@@ -413,13 +436,32 @@
         });
     }
 
+    function scheduleDomParse(force = false) {
+        const now = Date.now();
+        const remaining = Math.max(0, 1000 - (now - lastDomParseAt));
+
+        if (domParseTimeout) {
+            if (!force) return;
+            clearTimeout(domParseTimeout);
+        }
+
+        domParseTimeout = setTimeout(() => {
+            domParseTimeout = null;
+            lastDomParseAt = Date.now();
+            if (parseChainFromDOM(force)) {
+                logDebug('DOM fallback observer applied chain update');
+            }
+        }, remaining);
+    }
+
     function ensureDomObserver() {
         if (domObserver) return;
 
         domObserver = new MutationObserver(() => {
-            if (parseChainFromDOM()) {
-                logDebug('DOM fallback observer applied chain update');
-            }
+            const el = document.querySelector(CONFIG.DOM_CHAIN_SELECTOR);
+            const text = el?.textContent?.trim();
+            if (!text || text === lastObservedChainText) return;
+            scheduleDomParse();
         });
 
         domObserver.observe(document.documentElement || document, {
@@ -649,7 +691,7 @@
 
         // Start DOM fallback for when websocket updates are missing
         ensureDomObserver();
-        parseChainFromDOM();
+        parseChainFromDOM(true);
 
         // Watch for URL changes (SPA navigation)
         let lastUrl = location.href;
@@ -658,7 +700,7 @@
             if (url !== lastUrl) {
                 lastUrl = url;
                 log('URL changed, refreshing guard state:', url);
-                parseChainFromDOM();
+                scheduleDomParse(true);
                 updateGuard();
             }
         }).observe(document, { subtree: true, childList: true });
@@ -669,7 +711,7 @@
         // Periodic check for attack buttons (they load dynamically)
         if (window.location.href.includes('sid=attack')) {
             setInterval(() => {
-                parseChainFromDOM();
+                scheduleDomParse(true);
                 updateGuard();
             }, 1000);
         }
