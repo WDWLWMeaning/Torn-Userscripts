@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Guard (PDA)
 // @namespace    torn-chain-guard
-// @version      1.5.2
+// @version      1.5.3
 // @description  Prevents accidental attacks when within range of a chain bonus threshold
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -17,6 +17,14 @@
         BONUS_THRESHOLDS: [10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000],
         DOM_CHAIN_SELECTOR: '.bar-value___uxnah',
         ATTACK_CHAIN_SELECTOR: '.labelTitle___ZtfnD',
+        ATTACK_CHAIN_FALLBACK_SELECTORS: [
+            '.labelTitle___ZtfnD',
+            '[class*="labelTitle"]',
+            '[class*="chain"] [class*="title"]',
+            '[class*="chain"] [class*="label"]',
+            '[class*="attack"] [class*="chain"]'
+        ],
+        POLL_INTERVAL_MS: 300,
         STYLE_ID: 'chain-guard-pda-styles'
     };
 
@@ -42,16 +50,16 @@
     };
 
     let lastDangerZoneState = null;
-    let domObserver = null;
     let ignoredBonusThreshold = null;
     let lastLoggedChainKey = null;
     let lastObservedChainText = null;
-    let domParseTimeout = null;
-    let lastDomParseAt = 0;
-    let attackButtonObserver = null;
     let blockedAttackButtons = new Set();
     let settingsPanelRef = null;
     let headerButtonObserver = null;
+    let chainPollInterval = null;
+    let guardPollInterval = null;
+    let lastPollMode = null;
+    let lastMissingChainLogKey = null;
 
     function log(...args) {
         console.log('[Chain Guard PDA]', ...args);
@@ -375,73 +383,112 @@
         return Math.round(base * multiplier);
     }
 
-    function parseAttackPageChain(el) {
+    function findAttackChainElement() {
+        for (const selector of CONFIG.ATTACK_CHAIN_FALLBACK_SELECTORS) {
+            const el = document.querySelector(selector);
+            if (!el) continue;
+
+            const text = el.textContent?.trim() || '';
+            if (/\d/.test(text)) {
+                return { el, selector, text };
+            }
+        }
+
+        return null;
+    }
+
+    function parseAttackPageChain(el, selector = CONFIG.ATTACK_CHAIN_SELECTOR) {
         if (!el) return null;
 
-        const amountText = el.querySelector('span')?.textContent?.trim() || '';
+        const fullText = el.textContent?.trim() || '';
+        const spanText = el.querySelector('span')?.textContent?.trim() || '';
+        const amountMatch = fullText.match(/(\d+(?:\.\d+)?\s*[kmb]?)/i);
+        const amountText = spanText || amountMatch?.[1] || '';
         const amount = parseCompactNumber(amountText);
         if (!Number.isFinite(amount)) {
+            logDebug('Attack DOM parse failed for selector', selector, 'raw text:', fullText);
             return null;
         }
 
         return {
             amount,
             max: getNextBonus(amount) || chainState.max || 1000,
-            text: el.textContent.trim()
+            text: fullText,
+            selector
         };
     }
 
-    function parseChainFromDOM(force = false) {
-        const isAttackPage = window.location.href.includes('sid=attack');
-        const attackEl = isAttackPage ? document.querySelector(CONFIG.ATTACK_CHAIN_SELECTOR) : null;
-        const sidebarEl = document.querySelector(CONFIG.DOM_CHAIN_SELECTOR);
-        const el = attackEl || sidebarEl;
-        const sourceType = attackEl ? 'attack' : 'sidebar';
-
-        if (!el) {
-            logDebug('DOM parse skipped, chain element not found');
-            return false;
-        }
-
-        if (attackEl) {
-            const parsed = parseAttackPageChain(attackEl);
-            if (!parsed) {
-                logDebug('Attack DOM parse failed, unexpected text:', attackEl.textContent.trim());
-                return false;
-            }
-
-            const observedText = `${sourceType}:${parsed.text}`;
-            if (!force && observedText === lastObservedChainText) {
-                return false;
-            }
-
-            lastObservedChainText = observedText;
-            logDebug('Attack DOM parse success:', parsed.text, '=>', parsed.amount, '/', parsed.max);
-            return applyChainState(parsed.amount, parsed.max, chainState.bonuses, 'dom');
-        }
+    function parseSidebarChain(sidebarEl) {
+        if (!sidebarEl) return null;
 
         const text = sidebarEl.textContent.trim();
-        const observedText = `${sourceType}:${text}`;
-        if (!force && observedText === lastObservedChainText) {
-            return false;
-        }
-
-        lastObservedChainText = observedText;
         const match = text.match(/([^/]+)\s*\/\s*([^\s]+)/);
         if (!match) {
-            logDebug('DOM parse failed, unexpected text:', text);
-            return false;
+            logDebug('Sidebar DOM parse failed, unexpected text:', text);
+            return null;
         }
 
         const amount = parseCompactNumber(match[1]);
         const max = parseCompactNumber(match[2]);
         if (!Number.isFinite(amount) || !Number.isFinite(max)) {
-            logDebug('DOM parse failed, invalid values:', text);
+            logDebug('Sidebar DOM parse failed, invalid values:', text);
+            return null;
+        }
+
+        return { amount, max, text };
+    }
+
+    function parseChainFromDOM(force = false) {
+        const isAttackPage = window.location.href.includes('sid=attack');
+        const attackMatch = isAttackPage ? findAttackChainElement() : null;
+        const sidebarEl = document.querySelector(CONFIG.DOM_CHAIN_SELECTOR);
+
+        if (isAttackPage) {
+            if (attackMatch) {
+                const parsed = parseAttackPageChain(attackMatch.el, attackMatch.selector);
+                if (parsed) {
+                    const observedText = `attack:${parsed.selector}:${parsed.text}`;
+                    if (!force && observedText === lastObservedChainText) {
+                        return false;
+                    }
+
+                    lastObservedChainText = observedText;
+                    lastMissingChainLogKey = null;
+                    logDebug('Attack DOM parse success via', parsed.selector + ':', parsed.text, '=>', parsed.amount, '/', parsed.max);
+                    return applyChainState(parsed.amount, parsed.max, chainState.bonuses, 'dom');
+                }
+            }
+
+            const fallbackKey = `attack-missing:${window.location.href}`;
+            if (lastMissingChainLogKey !== fallbackKey) {
+                lastMissingChainLogKey = fallbackKey;
+                logDebug('Attack page chain element not found. Tried selectors:', CONFIG.ATTACK_CHAIN_FALLBACK_SELECTORS.join(', '));
+            }
+        }
+
+        if (!sidebarEl) {
+            const missingKey = `${isAttackPage ? 'attack' : 'sidebar'}:missing:${window.location.href}`;
+            if (lastMissingChainLogKey !== missingKey) {
+                lastMissingChainLogKey = missingKey;
+                logDebug('DOM parse skipped, chain element not found for mode:', isAttackPage ? 'attack' : 'sidebar');
+            }
             return false;
         }
 
-        logDebug('DOM parse success:', text, '=>', amount, '/', max);
-        return applyChainState(amount, max, chainState.bonuses, 'dom');
+        const parsed = parseSidebarChain(sidebarEl);
+        if (!parsed) {
+            return false;
+        }
+
+        const observedText = `sidebar:${parsed.text}`;
+        if (!force && observedText === lastObservedChainText) {
+            return false;
+        }
+
+        lastObservedChainText = observedText;
+        lastMissingChainLogKey = null;
+        logDebug('Sidebar DOM parse success:', parsed.text, '=>', parsed.amount, '/', parsed.max);
+        return applyChainState(parsed.amount, parsed.max, chainState.bonuses, 'dom');
     }
 
     function isInDangerZone() {
@@ -620,65 +667,31 @@
         });
     }
 
-    function scheduleDomParse(force = false) {
-        const now = Date.now();
-        const remaining = Math.max(0, 1000 - (now - lastDomParseAt));
+    function ensurePolling() {
+        if (!chainPollInterval) {
+            chainPollInterval = setInterval(() => {
+                const isAttackPage = window.location.href.includes('sid=attack');
+                const pollMode = isAttackPage ? 'attack' : 'sidebar';
+                if (pollMode !== lastPollMode) {
+                    lastPollMode = pollMode;
+                    log('Chain poll mode:', pollMode, 'url:', window.location.href);
+                }
 
-        if (domParseTimeout) {
-            if (!force) return;
-            clearTimeout(domParseTimeout);
+                if (parseChainFromDOM()) {
+                    logDebug('Chain poll applied DOM update');
+                }
+            }, CONFIG.POLL_INTERVAL_MS);
+
+            log('Chain polling started, interval:', CONFIG.POLL_INTERVAL_MS, 'ms');
         }
 
-        domParseTimeout = setTimeout(() => {
-            domParseTimeout = null;
-            lastDomParseAt = Date.now();
-            if (parseChainFromDOM(force)) {
-                logDebug('DOM observer applied chain update');
-            }
-        }, remaining);
-    }
+        if (!guardPollInterval) {
+            guardPollInterval = setInterval(() => {
+                updateGuard();
+            }, CONFIG.POLL_INTERVAL_MS);
 
-    function ensureDomObserver() {
-        if (domObserver) return;
-
-        domObserver = new MutationObserver(() => {
-            const isAttackPage = window.location.href.includes('sid=attack');
-            const attackEl = isAttackPage ? document.querySelector(CONFIG.ATTACK_CHAIN_SELECTOR) : null;
-            const sidebarEl = document.querySelector(CONFIG.DOM_CHAIN_SELECTOR);
-            const el = attackEl || sidebarEl;
-            const sourceType = attackEl ? 'attack' : 'sidebar';
-            const text = el?.textContent?.trim();
-            if (!text || `${sourceType}:${text}` === lastObservedChainText) return;
-            scheduleDomParse();
-        });
-
-        domObserver.observe(document.documentElement || document, {
-            subtree: true,
-            childList: true,
-            characterData: true
-        });
-
-        log('DOM observer started');
-    }
-
-    function ensureAttackButtonObserver() {
-        if (attackButtonObserver) return;
-
-        attackButtonObserver = new MutationObserver(() => {
-            if (!window.location.href.includes('sid=attack')) return;
-            if (!isInDangerZone() || isGuardIgnored()) return;
-            blockAttackButtons();
-        });
-
-        attackButtonObserver.observe(document.documentElement || document, {
-            subtree: true,
-            childList: true,
-            characterData: true,
-            attributes: true,
-            attributeFilter: ['class', 'disabled', 'value']
-        });
-
-        log('Attack button observer started');
+            logDebug('Guard polling started, interval:', CONFIG.POLL_INTERVAL_MS, 'ms');
+        }
     }
 
     function ensureHeaderSettingsButton() {
@@ -812,30 +825,10 @@
         log('Init start');
         ensureStyles();
         loadChainCache();
-        ensureDomObserver();
-        ensureAttackButtonObserver();
         ensureHeaderButtonObserver();
+        ensurePolling();
         parseChainFromDOM(true);
-
-        let lastUrl = location.href;
-        new MutationObserver(() => {
-            const url = location.href;
-            if (url !== lastUrl) {
-                lastUrl = url;
-                log('URL changed, refreshing guard state:', url);
-                scheduleDomParse(true);
-                updateGuard();
-            }
-        }).observe(document, { subtree: true, childList: true });
-
         updateGuard();
-        if (window.location.href.includes('sid=attack')) {
-            blockAttackButtons();
-            setInterval(() => {
-                scheduleDomParse(true);
-                updateGuard();
-            }, 250);
-        }
 
         log('Ready. Current chain:', chainState.amount, '/', chainState.max, 'source:', chainState.source);
     }
