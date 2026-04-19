@@ -59,6 +59,7 @@
 
     let lastDangerZoneState = null;
     let domObserver = null;
+    let ignoreProtectionUntil = 0;
 
     function log(...args) {
         console.log('[Chain Guard]', ...args);
@@ -224,67 +225,87 @@
 
     // Create warning banner
     function createWarningBanner() {
-        const existing = document.getElementById('chain-guard-warning');
-        if (existing) return existing;
-
-        const banner = document.createElement('div');
-        banner.id = 'chain-guard-warning';
-        banner.innerHTML = `
-            <div class="cg-icon">STOP</div>
-            <div class="cg-content">
-                <div class="cg-title">Chain Bonus Protection Active</div>
-                <div class="cg-subtitle">
-                    Only <strong>${getDistanceToBonus()}</strong> attacks until chain bonus!
+        let banner = document.getElementById('chain-guard-warning');
+        if (!banner) {
+            banner = document.createElement('div');
+            banner.id = 'chain-guard-warning';
+            banner.innerHTML = `
+                <div class="cg-icon">STOP</div>
+                <div class="cg-content">
+                    <div class="cg-title">Chain Bonus Protection Active</div>
+                    <div class="cg-subtitle"></div>
                 </div>
-            </div>
-        `;
+                <button type="button" class="cg-ignore">Ignore once</button>
+            `;
 
-        GM_addStyle(`
-            #chain-guard-warning {
-                position: fixed;
-                top: 60px;
-                left: 50%;
-                transform: translateX(-50%);
-                z-index: 999999;
-                background: ${TORN.red};
-                color: white;
-                padding: 12px 24px;
-                border-radius: 4px;
-                display: flex;
-                align-items: center;
-                gap: 16px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-                font-family: 'Open Sans', Arial, sans-serif;
-                animation: cg-pulse 2s infinite;
-            }
-            @keyframes cg-pulse {
-                0%, 100% { box-shadow: 0 4px 12px rgba(229,76,25,0.5); }
-                50% { box-shadow: 0 4px 24px rgba(229,76,25,0.8); }
-            }
-            #chain-guard-warning .cg-icon {
-                font-weight: bold;
-                font-size: 18px;
-                padding: 4px 8px;
-                background: rgba(0,0,0,0.3);
-                border-radius: 3px;
-            }
-            #chain-guard-warning .cg-content {
-                text-align: center;
-            }
-            #chain-guard-warning .cg-title {
-                font-size: 16px;
-                font-weight: bold;
-            }
-            #chain-guard-warning .cg-subtitle {
-                font-size: 13px;
-                opacity: 0.9;
-            }
-            #chain-guard-warning strong {
-                color: #ffeb3b;
-            }
-        `);
+            GM_addStyle(`
+                #chain-guard-warning {
+                    position: fixed;
+                    top: 60px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    z-index: 999999;
+                    background: ${TORN.red};
+                    color: white;
+                    padding: 12px 24px;
+                    border-radius: 4px;
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+                    font-family: 'Open Sans', Arial, sans-serif;
+                    animation: cg-pulse 2s infinite;
+                }
+                @keyframes cg-pulse {
+                    0%, 100% { box-shadow: 0 4px 12px rgba(229,76,25,0.5); }
+                    50% { box-shadow: 0 4px 24px rgba(229,76,25,0.8); }
+                }
+                #chain-guard-warning .cg-icon {
+                    font-weight: bold;
+                    font-size: 18px;
+                    padding: 4px 8px;
+                    background: rgba(0,0,0,0.3);
+                    border-radius: 3px;
+                }
+                #chain-guard-warning .cg-content {
+                    text-align: center;
+                }
+                #chain-guard-warning .cg-title {
+                    font-size: 16px;
+                    font-weight: bold;
+                }
+                #chain-guard-warning .cg-subtitle {
+                    font-size: 13px;
+                    opacity: 0.9;
+                }
+                #chain-guard-warning strong {
+                    color: #ffeb3b;
+                }
+                #chain-guard-warning .cg-ignore {
+                    border: 1px solid rgba(255,255,255,0.45);
+                    background: rgba(0,0,0,0.25);
+                    color: white;
+                    border-radius: 3px;
+                    padding: 8px 12px;
+                    cursor: pointer;
+                    font-weight: bold;
+                }
+                #chain-guard-warning .cg-ignore:hover {
+                    background: rgba(0,0,0,0.4);
+                }
+            `);
 
-        document.body.appendChild(banner);
+            banner.querySelector('.cg-ignore').addEventListener('click', () => {
+                ignoreProtectionUntil = Date.now() + 5000;
+                log('Protection temporarily ignored for current attack');
+                updateGuard();
+            });
+
+            document.body.appendChild(banner);
+        }
+
+        const subtitle = banner.querySelector('.cg-subtitle');
+        subtitle.innerHTML = `Only <strong>${getDistanceToBonus()}</strong> attacks until chain bonus!`;
         return banner;
     }
 
@@ -294,35 +315,41 @@
         if (banner) banner.remove();
     }
 
+    function getBlockedButtonLabel() {
+        return `Chain Guard: ${getDistanceToBonus()} to bonus`;
+    }
+
+    function isGuardIgnored() {
+        return Date.now() < ignoreProtectionUntil;
+    }
+
+    function findAttackButtons() {
+        return [...document.querySelectorAll('button[type="submit"], button, input[type="submit"]')].filter((el) => {
+            const text = (el.textContent || el.value || '').trim().toLowerCase();
+            return text === 'attack' || text === 'start fight';
+        });
+    }
+
     // Block attack buttons
     function blockAttackButtons() {
-        // Common attack button selectors on Torn
-        const selectors = [
-            'input[value="Attack"]',
-            'input[value="attack"]',
-            'button:contains("Attack")',
-            '.attack-btn',
-            '[data-action="attack"]',
-            'a[href*="sid=attack&attack="]'
-        ];
+        findAttackButtons().forEach(btn => {
+            if (!btn.dataset.chainGuardBlocked) {
+                btn.dataset.chainGuardBlocked = 'true';
+                btn.dataset.originalDisabled = btn.disabled ? 'true' : 'false';
+                btn.dataset.originalTitle = btn.title || '';
+                btn.dataset.originalText = btn.tagName === 'INPUT' ? (btn.value || '') : (btn.textContent || '');
+                btn.addEventListener('click', preventAttack, true);
+            }
 
-        selectors.forEach(selector => {
-            const buttons = document.querySelectorAll(selector);
-            buttons.forEach(btn => {
-                if (!btn.dataset.chainGuardBlocked) {
-                    btn.dataset.chainGuardBlocked = 'true';
-                    btn.dataset.originalOnClick = btn.onclick;
-                    btn.dataset.originalDisabled = btn.disabled;
-
-                    btn.disabled = true;
-                    btn.style.opacity = '0.5';
-                    btn.style.cursor = 'not-allowed';
-                    btn.title = 'Blocked by Chain Guard - too close to bonus!';
-
-                    // Prevent clicks
-                    btn.addEventListener('click', preventAttack, true);
-                }
-            });
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'not-allowed';
+            btn.title = 'Blocked by Chain Guard - too close to bonus!';
+            if (btn.tagName === 'INPUT') {
+                btn.value = getBlockedButtonLabel();
+            } else {
+                btn.textContent = getBlockedButtonLabel();
+            }
         });
 
         // Also block links that lead to attacks
@@ -330,20 +357,22 @@
         attackLinks.forEach(link => {
             if (!link.dataset.chainGuardBlocked) {
                 link.dataset.chainGuardBlocked = 'true';
+                link.dataset.originalTitle = link.title || '';
                 link.addEventListener('click', preventAttack, true);
-                link.style.opacity = '0.5';
-                link.title = 'Blocked by Chain Guard - too close to bonus!';
             }
+            link.style.opacity = '0.5';
+            link.style.cursor = 'not-allowed';
+            link.title = 'Blocked by Chain Guard - too close to bonus!';
         });
     }
 
     // Prevent attack click
     function preventAttack(e) {
-        if (isInDangerZone()) {
+        if (isInDangerZone() && !isGuardIgnored()) {
             log('Attack blocked,', getDistanceToBonus(), 'attacks away from bonus');
             e.preventDefault();
             e.stopPropagation();
-            alert(`Chain Guard: You are only ${getDistanceToBonus()} attacks away from a chain bonus!\n\nDisable protection in the Chain Guard menu if you really want to attack.`);
+            alert(`Chain Guard: You are only ${getDistanceToBonus()} attacks away from a chain bonus!\n\nClick Ignore once in the warning banner if you really want to attack.`);
             return false;
         }
     }
@@ -351,12 +380,22 @@
     // Unblock buttons (when leaving danger zone)
     function unblockAttackButtons() {
         document.querySelectorAll('[data-chain-guard-blocked="true"]').forEach(el => {
-            el.disabled = el.dataset.originalDisabled === 'true';
+            if ('disabled' in el) {
+                el.disabled = el.dataset.originalDisabled === 'true';
+            }
             el.style.opacity = '';
             el.style.cursor = '';
-            el.title = '';
+            el.title = el.dataset.originalTitle || '';
+            if (el.tagName === 'INPUT' && typeof el.dataset.originalText === 'string') {
+                el.value = el.dataset.originalText;
+            } else if (typeof el.dataset.originalText === 'string') {
+                el.textContent = el.dataset.originalText;
+            }
             el.removeEventListener('click', preventAttack, true);
             delete el.dataset.chainGuardBlocked;
+            delete el.dataset.originalDisabled;
+            delete el.dataset.originalTitle;
+            delete el.dataset.originalText;
         });
     }
 
@@ -382,6 +421,7 @@
     function updateGuard() {
         const isAttackPage = window.location.href.includes('sid=attack');
         const inDangerZone = isInDangerZone();
+        const ignored = isGuardIgnored();
 
         if (lastDangerZoneState !== inDangerZone) {
             log(inDangerZone ? 'Entered danger zone' : 'Exited danger zone');
@@ -390,8 +430,10 @@
 
         if (inDangerZone) {
             createWarningBanner();
-            if (isAttackPage) {
+            if (isAttackPage && !ignored) {
                 blockAttackButtons();
+            } else {
+                unblockAttackButtons();
             }
         } else {
             removeWarningBanner();
@@ -582,6 +624,7 @@
             const url = location.href;
             if (url !== lastUrl) {
                 lastUrl = url;
+                ignoreProtectionUntil = 0;
                 log('URL changed, refreshing guard state:', url);
                 parseChainFromDOM();
                 updateGuard();
