@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Guard
 // @namespace    torn-chain-guard
-// @version      1.5.2
+// @version      1.5.3
 // @description  Prevents accidental attacks when within range of a chain bonus threshold
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -747,6 +747,7 @@
             const debugMode = panel.querySelector('#cg-debug-mode').checked;
             if (threshold > 0) {
                 saveSettings({ threshold, debugMode });
+                ignoredBonusThreshold = null;
                 log('Settings saved:', { threshold, debugMode });
                 updateGuard();
             }
