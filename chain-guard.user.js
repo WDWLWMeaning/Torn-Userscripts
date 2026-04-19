@@ -100,7 +100,11 @@
             const data = JSON.parse(cached);
             // Only use cache if less than 5 minutes old
             if (Date.now() - data.lastUpdate < 300000) {
-                chainState = { ...chainState, ...data, source: data.source || 'cache' };
+                chainState = {
+                    ...chainState,
+                    ...data,
+                    source: data.source === 'dom' ? 'dom' : 'cache'
+                };
                 log('Loaded cached chain:', chainState.amount, '/', chainState.max, 'source:', chainState.source);
             }
         } catch {
@@ -121,19 +125,20 @@
     function applyChainState(amount, max, bonuses, source) {
         if (!Number.isFinite(amount)) return false;
 
+        const normalizedSource = source === 'dom' ? 'dom' : 'cache';
         const normalizedMax = Number.isFinite(max) && max > 0 ? max : (getNextBonus(amount) || 1000);
         const normalizedBonuses = Number.isFinite(bonuses) ? bonuses : chainState.bonuses;
         const hasChanged = chainState.amount !== amount || chainState.max !== normalizedMax || chainState.bonuses !== normalizedBonuses;
 
         if (!hasChanged) {
-            chainState.source = source;
+            chainState.source = normalizedSource;
             return false;
         }
 
         chainState.amount = amount;
         chainState.max = normalizedMax;
         chainState.bonuses = normalizedBonuses;
-        chainState.source = source;
+        chainState.source = normalizedSource;
 
         if (ignoredBonusThreshold !== null && chainState.amount >= chainState.max) {
             logDebug('Ignore state reset, chain bonus reached at threshold:', ignoredBonusThreshold, 'current chain:', chainState.amount, '/', chainState.max);
@@ -145,39 +150,11 @@
         const chainKey = `${chainState.amount}/${chainState.max}`;
         if (lastLoggedChainKey !== chainKey) {
             lastLoggedChainKey = chainKey;
-            log('Chain updated from', source + ':', chainState.amount, '/', chainState.max);
+            log('Chain updated from', normalizedSource + ':', chainState.amount, '/', chainState.max);
         }
 
         updateGuard();
         return true;
-    }
-
-    // Parse chain data from WebSocket message
-    function parseChainData(data) {
-        try {
-            const chain = data?.push?.pub?.data?.message?.namespaces?.sidebar?.actions?.updateChain?.chain;
-            if (!chain) {
-                logDebug('WebSocket payload did not contain chain data');
-                return false;
-            }
-
-            const amount = parseInt(chain.amount, 10);
-            const max = parseInt(chain.max, 10);
-            const bonuses = parseFloat(chain.bonuses);
-
-            logDebug('WebSocket chain data parsed:', { amount, max, bonuses });
-
-            if (applyChainState(amount, max, bonuses, 'websocket')) {
-                logDebug('WebSocket chain parse success');
-                return true;
-            }
-
-            logDebug('WebSocket chain parse failed, invalid amount:', chain.amount);
-            return false;
-        } catch (e) {
-            logDebug('WebSocket chain parse error:', e);
-            return false;
-        }
     }
 
     function parseCompactNumber(value) {
@@ -230,37 +207,6 @@
     // Get distance to next bonus
     function getDistanceToBonus() {
         return chainState.max - chainState.amount;
-    }
-
-    // Override WebSocket to intercept messages
-    function hookWebSocket() {
-        const OriginalWebSocket = window.WebSocket;
-        log('Hooking WebSocket interceptor');
-
-        window.WebSocket = function(url, protocols) {
-            logDebug('WebSocket constructed:', url);
-            const ws = new OriginalWebSocket(url, protocols);
-
-            ws.addEventListener('message', (event) => {
-                logDebug('WebSocket message received');
-                try {
-                    const data = JSON.parse(event.data);
-                    const parsed = parseChainData(data);
-                    if (!parsed) {
-                        logDebug('WebSocket message parsed as JSON, but no usable chain update found');
-                    }
-                } catch (error) {
-                    logDebug('WebSocket message JSON parse failed:', error);
-                }
-            });
-
-            return ws;
-        };
-
-        // Copy static properties
-        Object.setPrototypeOf(window.WebSocket, OriginalWebSocket);
-        window.WebSocket.prototype = OriginalWebSocket.prototype;
-        log('WebSocket interceptor installed');
     }
 
     // Create warning banner
@@ -502,7 +448,7 @@
             domParseTimeout = null;
             lastDomParseAt = Date.now();
             if (parseChainFromDOM(force)) {
-                logDebug('DOM fallback observer applied chain update');
+                logDebug('DOM observer applied chain update');
             }
         }, remaining);
     }
@@ -523,7 +469,7 @@
             characterData: true
         });
 
-        log('DOM fallback observer started');
+        log('DOM observer started');
     }
 
     function ensureAttackButtonObserver() {
@@ -771,10 +717,7 @@
         // Load cached chain data
         loadChainCache();
 
-        // Hook WebSocket early
-        hookWebSocket();
-
-        // Start DOM fallback for when websocket updates are missing
+        // Start DOM observers
         ensureDomObserver();
         ensureAttackButtonObserver();
         parseChainFromDOM(true);
