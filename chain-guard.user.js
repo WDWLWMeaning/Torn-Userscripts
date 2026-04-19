@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Guard
 // @namespace    torn-chain-guard
-// @version      1.3.1
+// @version      1.3.2
 // @description  Prevents accidental attacks when within range of a chain bonus threshold
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -18,7 +18,7 @@
 // ==/UserScript==
 
 /**
- * Torn Chain Guard v1.3.1
+ * Torn Chain Guard v1.3.2
  * Prevents attacks when near chain bonus thresholds
  */
 
@@ -64,6 +64,7 @@
     let lastObservedChainText = null;
     let domParseTimeout = null;
     let lastDomParseAt = 0;
+    let attackButtonObserver = null;
 
     function log(...args) {
         console.log('[Chain Guard]', ...args);
@@ -335,6 +336,7 @@
             banner.querySelector('.cg-ignore').addEventListener('click', () => {
                 ignoredBonusThreshold = chainState.max;
                 logDebug('Ignore clicked, protection disabled until next bonus threshold:', ignoredBonusThreshold);
+                removeWarningBanner();
                 updateGuard();
             });
 
@@ -361,10 +363,17 @@
     }
 
     function findAttackButtons() {
-        return [...document.querySelectorAll('button[type="submit"], button, input[type="submit"]')].filter((el) => {
+        const dialogStartFightButtons = [...document.querySelectorAll('.dialogButtons___nX4Bz button')].filter((el) => {
+            const text = (el.textContent || el.value || '').trim().toLowerCase();
+            return text === 'start fight';
+        });
+
+        const genericAttackButtons = [...document.querySelectorAll('button[type="submit"], button, input[type="submit"]')].filter((el) => {
             const text = (el.textContent || el.value || '').trim().toLowerCase();
             return text === 'attack' || text === 'start fight';
         });
+
+        return [...new Set([...dialogStartFightButtons, ...genericAttackButtons])];
     }
 
     // Block attack buttons
@@ -471,6 +480,26 @@
         });
 
         log('DOM fallback observer started');
+    }
+
+    function ensureAttackButtonObserver() {
+        if (attackButtonObserver) return;
+
+        attackButtonObserver = new MutationObserver(() => {
+            if (!window.location.href.includes('sid=attack')) return;
+            if (!isInDangerZone() || isGuardIgnored()) return;
+            blockAttackButtons();
+        });
+
+        attackButtonObserver.observe(document.documentElement || document, {
+            subtree: true,
+            childList: true,
+            characterData: true,
+            attributes: true,
+            attributeFilter: ['class', 'disabled', 'value']
+        });
+
+        log('Attack button observer started');
     }
 
     // Update guard state
@@ -691,6 +720,7 @@
 
         // Start DOM fallback for when websocket updates are missing
         ensureDomObserver();
+        ensureAttackButtonObserver();
         parseChainFromDOM(true);
 
         // Watch for URL changes (SPA navigation)
@@ -707,13 +737,16 @@
 
         // Initial guard check
         updateGuard();
+        if (window.location.href.includes('sid=attack')) {
+            blockAttackButtons();
+        }
 
         // Periodic check for attack buttons (they load dynamically)
         if (window.location.href.includes('sid=attack')) {
             setInterval(() => {
                 scheduleDomParse(true);
                 updateGuard();
-            }, 1000);
+            }, 250);
         }
 
         // Register menu command
