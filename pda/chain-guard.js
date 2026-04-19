@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Guard (PDA)
 // @namespace    torn-chain-guard
-// @version      1.5.7
+// @version      1.5.8
 // @description  Prevents accidental attacks when within range of a chain bonus threshold
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -679,16 +679,23 @@
         if (!sidebarEl) return null;
 
         const text = sidebarEl.textContent.trim();
-        const match = text.match(/([^/]+)\s*\/\s*([^\s]+)/);
-        if (!match) {
-            logDebug('Sidebar DOM parse failed, unexpected text:', text);
-            return null;
+        let amount = NaN;
+        let max = NaN;
+
+        const matchWithSlash = text.match(/(\d+(?:\.\d+)?\s*[kmb]?)\s*\/\s*(\d+(?:\.\d+)?\s*[kmb]?)/i);
+        if (matchWithSlash) {
+            amount = parseCompactNumber(matchWithSlash[1]);
+            max = parseCompactNumber(matchWithSlash[2]);
+        } else {
+            const matchNumber = text.match(/(\d+(?:\.\d+)?\s*[kmb]?)/i);
+            if (matchNumber) {
+                amount = parseCompactNumber(matchNumber[1]);
+                max = getNextBonus(amount) || 1000;
+            }
         }
 
-        const amount = parseCompactNumber(match[1]);
-        const max = parseCompactNumber(match[2]);
         if (!Number.isFinite(amount) || !Number.isFinite(max)) {
-            logDebug('Sidebar DOM parse failed, invalid values:', text);
+            logDebug('Sidebar DOM parse failed, unexpected or invalid text:', text);
             return null;
         }
 
