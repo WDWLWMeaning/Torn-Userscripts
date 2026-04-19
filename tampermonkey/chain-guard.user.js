@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Guard
 // @namespace    torn-chain-guard
-// @version      1.5.3
+// @version      1.6.0
 // @description  Prevents accidental attacks when within range of a chain bonus threshold
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -74,18 +74,15 @@
     }
 
     function logDebug(...args) {
-        if (loadSettings().debugMode) {
-            log(...args);
-        }
     }
 
     // Load settings
     function loadSettings() {
         const saved = GM_getValue(CONFIG.SETTINGS_KEY, '{}');
         try {
-            return { threshold: CONFIG.DEFAULT_THRESHOLD, debugMode: false, ...JSON.parse(saved) };
+            return { threshold: CONFIG.DEFAULT_THRESHOLD, ...JSON.parse(saved) };
         } catch {
-            return { threshold: CONFIG.DEFAULT_THRESHOLD, debugMode: false };
+            return { threshold: CONFIG.DEFAULT_THRESHOLD };
         }
     }
 
@@ -585,12 +582,6 @@
                         <label>Warning Threshold (attacks from bonus)</label>
                         <input type="number" id="cg-threshold" value="${settings.threshold}" min="1" max="100">
                     </div>
-                    <div class="cg-field cg-checkbox-field">
-                        <label>
-                            <input type="checkbox" id="cg-debug-mode" ${settings.debugMode ? 'checked' : ''}>
-                            Enable Debug Mode
-                        </label>
-                    </div>
                     <div class="cg-info">
                         <p>Current chain: <strong data-cg-info="chain">${chainState.amount}</strong> / <span data-cg-info="max">${chainState.max}</span></p>
                         <p>Distance to bonus: <strong data-cg-info="distance">${getDistanceToBonus()}</strong></p>
@@ -676,18 +667,6 @@
                 font-size: 14px;
                 box-sizing: border-box;
             }
-            #chain-guard-settings .cg-checkbox-field label {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                color: ${TORN.text};
-                cursor: pointer;
-            }
-            #chain-guard-settings .cg-checkbox-field input {
-                width: auto;
-                padding: 0;
-                margin: 0;
-            }
             #chain-guard-settings .cg-info {
                 background: ${TORN.panel};
                 padding: 12px;
@@ -744,11 +723,10 @@
         panel.querySelector('.cg-overlay').onclick = closePanel;
         panel.querySelector('.cg-save').onclick = () => {
             const threshold = parseInt(panel.querySelector('#cg-threshold').value, 10);
-            const debugMode = panel.querySelector('#cg-debug-mode').checked;
             if (threshold > 0) {
-                saveSettings({ threshold, debugMode });
+                saveSettings({ threshold });
                 ignoredBonusThreshold = null;
-                log('Settings saved:', { threshold, debugMode });
+                log('Settings saved:', { threshold });
                 updateGuard();
             }
             closePanel();
