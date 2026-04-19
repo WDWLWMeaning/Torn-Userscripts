@@ -65,6 +65,8 @@
     let domParseTimeout = null;
     let lastDomParseAt = 0;
     let attackButtonObserver = null;
+    let blockedAttackButtons = new Set();
+    let settingsPanelRef = null;
 
     function log(...args) {
         console.log('[Chain Guard]', ...args);
@@ -262,6 +264,31 @@
     }
 
     // Create warning banner
+    function getGuardStatusMarkup() {
+        if (isInDangerZone()) {
+            return `<span style="color:${TORN.red}">${isGuardIgnored() ? 'Protection ignored until next bonus' : 'PROTECTION ACTIVE'}</span>`;
+        }
+
+        return `<span style="color:${TORN.green}">Safe to attack</span>`;
+    }
+
+    function updateSettingsPanel() {
+        if (!settingsPanelRef || !document.body.contains(settingsPanelRef)) {
+            settingsPanelRef = null;
+            return;
+        }
+
+        const chainValue = settingsPanelRef.querySelector('[data-cg-info="chain"]');
+        const maxValue = settingsPanelRef.querySelector('[data-cg-info="max"]');
+        const distanceValue = settingsPanelRef.querySelector('[data-cg-info="distance"]');
+        const statusValue = settingsPanelRef.querySelector('[data-cg-info="status"]');
+
+        if (chainValue) chainValue.textContent = chainState.amount;
+        if (maxValue) maxValue.textContent = chainState.max;
+        if (distanceValue) distanceValue.textContent = getDistanceToBonus();
+        if (statusValue) statusValue.innerHTML = getGuardStatusMarkup();
+    }
+
     function createWarningBanner() {
         let banner = document.getElementById('chain-guard-warning');
         if (!banner) {
@@ -358,6 +385,21 @@
         return `Chain Guard: ${getDistanceToBonus()} to bonus`;
     }
 
+    function updateBlockedButtonLabels() {
+        blockedAttackButtons.forEach((btn) => {
+            if (!btn.isConnected || btn.dataset.chainGuardBlocked !== 'true') {
+                blockedAttackButtons.delete(btn);
+                return;
+            }
+
+            if (btn.tagName === 'INPUT') {
+                btn.value = getBlockedButtonLabel();
+            } else {
+                btn.textContent = getBlockedButtonLabel();
+            }
+        });
+    }
+
     function isGuardIgnored() {
         return ignoredBonusThreshold !== null && chainState.amount < ignoredBonusThreshold;
     }
@@ -387,6 +429,7 @@
                 btn.addEventListener('click', preventAttack, true);
             }
 
+            blockedAttackButtons.add(btn);
             btn.disabled = true;
             btn.style.opacity = '0.5';
             btn.style.cursor = 'not-allowed';
@@ -438,6 +481,7 @@
                 el.textContent = el.dataset.originalText;
             }
             el.removeEventListener('click', preventAttack, true);
+            blockedAttackButtons.delete(el);
             delete el.dataset.chainGuardBlocked;
             delete el.dataset.originalDisabled;
             delete el.dataset.originalTitle;
@@ -517,6 +561,7 @@
             createWarningBanner();
             if (isAttackPage && !ignored) {
                 blockAttackButtons();
+                updateBlockedButtonLabels();
             } else {
                 unblockAttackButtons();
             }
@@ -524,6 +569,8 @@
             removeWarningBanner();
             unblockAttackButtons();
         }
+
+        updateSettingsPanel();
     }
 
     // Create settings panel
@@ -555,9 +602,9 @@
                         </label>
                     </div>
                     <div class="cg-info">
-                        <p>Current chain: <strong>${chainState.amount}</strong> / ${chainState.max}</p>
-                        <p>Distance to bonus: <strong>${getDistanceToBonus()}</strong></p>
-                        <p>Status: ${isInDangerZone() ? '<span style="color:' + TORN.red + '">PROTECTION ACTIVE</span>' : '<span style="color:' + TORN.green + '">Safe to attack</span>'}</p>
+                        <p>Current chain: <strong data-cg-info="chain">${chainState.amount}</strong> / <span data-cg-info="max">${chainState.max}</span></p>
+                        <p>Distance to bonus: <strong data-cg-info="distance">${getDistanceToBonus()}</strong></p>
+                        <p>Status: <span data-cg-info="status">${getGuardStatusMarkup()}</span></p>
                     </div>
                 </div>
                 <div class="cg-footer">
@@ -691,11 +738,20 @@
         `);
 
         document.body.appendChild(panel);
+        settingsPanelRef = panel;
+        updateSettingsPanel();
+
+        const closePanel = () => {
+            if (settingsPanelRef === panel) {
+                settingsPanelRef = null;
+            }
+            panel.remove();
+        };
 
         // Event handlers
-        panel.querySelector('.cg-close').onclick = () => panel.remove();
-        panel.querySelector('.cg-cancel').onclick = () => panel.remove();
-        panel.querySelector('.cg-overlay').onclick = () => panel.remove();
+        panel.querySelector('.cg-close').onclick = closePanel;
+        panel.querySelector('.cg-cancel').onclick = closePanel;
+        panel.querySelector('.cg-overlay').onclick = closePanel;
         panel.querySelector('.cg-save').onclick = () => {
             const threshold = parseInt(panel.querySelector('#cg-threshold').value, 10);
             const debugMode = panel.querySelector('#cg-debug-mode').checked;
@@ -704,7 +760,7 @@
                 log('Settings saved:', { threshold, debugMode });
                 updateGuard();
             }
-            panel.remove();
+            closePanel();
         };
     }
 
