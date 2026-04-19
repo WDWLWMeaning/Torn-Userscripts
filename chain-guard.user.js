@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Guard
 // @namespace    torn-chain-guard
-// @version      1.3.0
+// @version      1.3.1
 // @description  Prevents accidental attacks when within range of a chain bonus threshold
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -18,7 +18,7 @@
 // ==/UserScript==
 
 /**
- * Torn Chain Guard v1.3.0
+ * Torn Chain Guard v1.3.1
  * Prevents attacks when near chain bonus thresholds
  */
 
