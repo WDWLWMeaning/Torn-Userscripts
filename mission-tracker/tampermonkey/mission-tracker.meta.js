@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Mission Tracker
 // @namespace    torn-mission-tracker
-// @version      3.2.1
+// @version      3.2.2
 // @description  Track Torn missions with native Torn styling. Red alert for <24h, yellow for <48h.
 // @author       Kevin
 // @match        https://www.torn.com/*

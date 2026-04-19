@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Mission Tracker
 // @namespace    torn-mission-tracker
-// @version      3.2.1
+// @version      3.2.2
 // @description  Track Torn missions with native Torn styling. Red alert for <24h, yellow for <48h.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -41,20 +41,21 @@
 
     // Torn's native color palette (from CSS vars)
     const TORN = {
-        bg: '#191919',
+        bg: '#444',
         panel: '#333',
-        panelActive: '#444',
+        panelActive: '#555',
         text: '#ddd',
         textMuted: '#999',
-        borderDark: '#222',
+        borderDark: '#333',
         borderLight: '#444',
+        headerGradient: 'linear-gradient(180deg, #777 0%, #333 100%)',
         green: '#82c91e',
         blue: '#74c0fc',
         red: '#E54C19',
         yellow: '#F08C00',
         purple: '#B197FC',
-        titleGradient: 'linear-gradient(180deg, #555 0%, #333 100%)',
-        panelGradient: 'linear-gradient(180deg, #555 0%, #333 100%)'
+        titleGradient: 'linear-gradient(180deg, #777 0%, #333 100%)',
+        panelGradient: 'linear-gradient(180deg, #777 0%, #333 100%)'
     };
 
     let badgeElement = null;

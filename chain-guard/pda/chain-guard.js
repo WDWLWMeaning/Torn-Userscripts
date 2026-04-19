@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Guard (PDA)
 // @namespace    torn-chain-guard
-// @version      1.6.0
+// @version      1.6.1
 // @description  Prevents accidental attacks when within range of a chain bonus threshold
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -41,13 +41,17 @@
     };
 
     const TORN = {
-        bg: '#191919',
+        bg: '#444',
         panel: '#333',
-        panelHover: '#444',
+        panelHover: '#555',
         text: '#ddd',
         textMuted: '#999',
         red: '#E54C19',
         yellow: '#F08C00',
+        green: '#82c91e',
+        border: '#444',
+        borderLight: '#555',
+        headerGradient: 'linear-gradient(180deg, #777 0%, #333 100%)'
         green: '#82c91e',
         blue: '#74c0fc',
         border: '#555'
@@ -123,7 +127,7 @@
                 align-items: center;
                 gap: 16px;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-                font-family: 'Open Sans', Arial, sans-serif;
+                font-family: Arial, sans-serif;
                 animation: cg-pulse 2s infinite;
             }
             @keyframes cg-pulse {
@@ -201,11 +205,11 @@
                 border-radius: 4px;
                 width: 400px;
                 max-width: 90%;
-                font-family: 'Open Sans', Arial, sans-serif;
+                font-family: Arial, sans-serif;
                 color: ${TORN.text};
             }
             #chain-guard-settings .cg-header {
-                background: linear-gradient(to bottom, ${TORN.panel}, #222);
+                background: ${TORN.headerGradient};
                 padding: 12px 16px;
                 border-bottom: 1px solid ${TORN.border};
                 display: flex;
