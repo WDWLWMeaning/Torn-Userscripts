@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Guard (PDA)
 // @namespace    torn-chain-guard
-// @version      1.5.8
+// @version      1.5.9
 // @description  Prevents accidental attacks when within range of a chain bonus threshold
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -37,8 +37,7 @@
             '[class*="label"]'
         ],
         POLL_INTERVAL_MS: 300,
-        STYLE_ID: 'chain-guard-pda-styles',
-        DEBUG_OVERLAY_ID: 'chain-guard-debug-overlay'
+        STYLE_ID: 'chain-guard-pda-styles'
     };
 
     const TORN = {
@@ -73,7 +72,6 @@
     let guardPollInterval = null;
     let lastPollMode = null;
     let lastMissingChainLogKey = null;
-    let lastDebugOverlayText = '';
     let debugState = {
         status: 'Running',
         currentUrl: window.location.href,
@@ -311,55 +309,8 @@
                 background: linear-gradient(to bottom, #4a4a4a, #2a2a2a);
                 color: white;
             }
-            #${CONFIG.DEBUG_OVERLAY_ID} {
-                position: fixed;
-                right: 12px;
-                bottom: 12px;
-                width: min(360px, calc(100vw - 24px));
-                max-height: min(45vh, 420px);
-                overflow: auto;
-                z-index: 10000000;
-                background: rgba(18, 18, 18, 0.96);
-                color: ${TORN.text};
-                border: 1px solid ${TORN.border};
-                border-radius: 6px;
-                padding: 10px 12px;
-                font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-                white-space: pre-wrap;
-                box-shadow: 0 8px 24px rgba(0,0,0,0.45);
-            }
-            #${CONFIG.DEBUG_OVERLAY_ID} .cg-debug-title {
-                color: ${TORN.blue};
-                font-weight: bold;
-                margin-bottom: 8px;
-            }
-            #${CONFIG.DEBUG_OVERLAY_ID} .cg-debug-section {
-                margin-top: 8px;
-            }
-            #${CONFIG.DEBUG_OVERLAY_ID} .cg-debug-label {
-                color: ${TORN.textMuted};
-            }
-            #${CONFIG.DEBUG_OVERLAY_ID} .cg-debug-ok {
-                color: ${TORN.green};
-            }
-            #${CONFIG.DEBUG_OVERLAY_ID} .cg-debug-warn {
-                color: ${TORN.yellow};
-            }
-            #${CONFIG.DEBUG_OVERLAY_ID} .cg-debug-bad {
-                color: ${TORN.red};
-            }
         `;
         document.head.appendChild(style);
-    }
-
-    function ensureDebugOverlay() {
-        let overlay = document.getElementById(CONFIG.DEBUG_OVERLAY_ID);
-        if (!overlay) {
-            overlay = document.createElement('div');
-            overlay.id = CONFIG.DEBUG_OVERLAY_ID;
-            document.body.appendChild(overlay);
-        }
-        return overlay;
     }
 
     function formatDebugValue(value) {
@@ -372,75 +323,21 @@
         }
     }
 
-    function escapeDebugHtml(value) {
-        return String(value)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
-    }
-
     function updateDebugState(patch = {}) {
         debugState = {
             ...debugState,
             ...patch,
             currentUrl: window.location.href
         };
-        renderDebugOverlay();
-    }
-
-    function renderDebugOverlay() {
-        const settings = loadSettings();
-        const overlay = document.getElementById(CONFIG.DEBUG_OVERLAY_ID);
-
-        if (!settings.debugMode) {
-            if (overlay) overlay.remove();
-            lastDebugOverlayText = '';
-            return;
-        }
-
-        const statusClass = debugState.status === 'Chain found'
-            ? 'cg-debug-ok'
-            : debugState.status === 'Chain NOT found'
-                ? 'cg-debug-bad'
-                : 'cg-debug-warn';
-        const searchResults = (debugState.searchResults || []).map((result) => {
-            const outcomeClass = result.found ? 'cg-debug-ok' : 'cg-debug-label';
-            const outcome = result.found ? `FOUND ${result.matchText || ''}`.trim() : 'no match';
-            return `${escapeDebugHtml(result.scope || 'search')}: ${escapeDebugHtml(result.selector)} (${escapeDebugHtml(formatDebugValue(result.matchCount))} nodes) → <span class="${outcomeClass}">${escapeDebugHtml(outcome)}</span>`;
-        }).join('<br>') || '<span class="cg-debug-label">No selectors tried yet</span>';
-
-        const lastParsed = debugState.lastParsed
-            ? `amount=${escapeDebugHtml(formatDebugValue(debugState.lastParsed.amount))}, max=${escapeDebugHtml(formatDebugValue(debugState.lastParsed.max))}, source=${escapeDebugHtml(formatDebugValue(debugState.lastParsed.source))}${debugState.lastParsed.selector ? `, selector=${escapeDebugHtml(debugState.lastParsed.selector)}` : ''}`
-            : '<span class="cg-debug-label">No parsed chain yet</span>';
-        const chainStateText = escapeDebugHtml(JSON.stringify(chainState));
-        const messageText = escapeDebugHtml(debugState.lastMessage || '');
-        const nextHtml = `
-            <div class="cg-debug-title">Chain Guard Debug</div>
-            <div><span class="cg-debug-label">Script status:</span> <span class="${statusClass}">${escapeDebugHtml(debugState.status)}</span></div>
-            <div><span class="cg-debug-label">Current URL:</span> ${escapeDebugHtml(debugState.currentUrl)}</div>
-            <div><span class="cg-debug-label">Poll mode:</span> ${escapeDebugHtml(debugState.pollMode || 'unknown')}</div>
-            <div class="cg-debug-section"><span class="cg-debug-label">Element search results:</span><br>${searchResults}</div>
-            <div class="cg-debug-section"><span class="cg-debug-label">Last parsed chain data:</span><br>${lastParsed}</div>
-            <div class="cg-debug-section"><span class="cg-debug-label">Current chain state:</span><br>${chainStateText}</div>
-            <div class="cg-debug-section"><span class="cg-debug-label">Last message:</span><br>${messageText || '<span class="cg-debug-label">n/a</span>'}</div>
-        `;
-
-        if (nextHtml === lastDebugOverlayText) return;
-
-        ensureDebugOverlay().innerHTML = nextHtml;
-        lastDebugOverlayText = nextHtml;
-    }
-
-    function setDebugOverlay(message) {
-        updateDebugState({ lastMessage: String(message || '').trim() || 'n/a' });
     }
 
     function logDebug(...args) {
-        if (loadSettings().debugMode) {
-            log(...args);
-            const debugText = args.map((arg) => formatDebugValue(arg)).join(' ');
-            setDebugOverlay(debugText);
-        }
+        if (!loadSettings().debugMode) return;
+
+        updateDebugState({
+            lastMessage: args.map((arg) => formatDebugValue(arg)).join(' ') || 'n/a'
+        });
+        log(...args);
     }
 
     function loadSettings() {
@@ -1096,7 +993,12 @@
                 saveSettings({ threshold, debugMode });
                 ignoredBonusThreshold = null;
                 log('Settings saved:', { threshold, debugMode });
-                setDebugOverlay(`Chain Guard loaded\nMode: ${window.location.href.includes('sid=attack') ? 'attack' : 'sidebar'}\nChain: ${chainState.amount}/${chainState.max}\nDebug: enabled`);
+                if (debugMode) {
+                    logDebug('Chain Guard debug enabled', {
+                        mode: window.location.href.includes('sid=attack') ? 'attack' : 'sidebar',
+                        chain: `${chainState.amount}/${chainState.max}`
+                    });
+                }
                 updateGuard();
             }
             closePanel();
@@ -1108,7 +1010,6 @@
         ensureStyles();
         loadChainCache();
         ensureHeaderButtonObserver();
-        setDebugOverlay(`Chain Guard script loaded\nURL: ${window.location.href}\nWaiting for DOM...`);
         ensurePolling();
         parseChainFromDOM(true);
         updateGuard();
