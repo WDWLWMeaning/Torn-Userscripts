@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Guard (PDA)
 // @namespace    torn-chain-guard
-// @version      1.5.5
+// @version      1.5.6
 // @description  Prevents accidental attacks when within range of a chain bonus threshold
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -16,16 +16,28 @@
         SETTINGS_KEY: 'chain_guard_settings',
         BONUS_THRESHOLDS: [10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000],
         DOM_CHAIN_SELECTOR: '.bar-value___uxnah',
+        SIDEBAR_CHAIN_FALLBACK_SELECTORS: [
+            '.bar-value___uxnah',
+            '[class*="bar-value"]',
+            '[class*="chain"] [class*="bar"]',
+            '[class*="chain"] [class*="value"]',
+            '[class*="sidebar"] [class*="chain"]',
+            '[class*="chainBar"]',
+            '[class*="chain"]'
+        ],
         ATTACK_CHAIN_SELECTOR: '.labelTitle___ZtfnD',
         ATTACK_CHAIN_FALLBACK_SELECTORS: [
             '.labelTitle___ZtfnD',
             '[class*="labelTitle"]',
             '[class*="chain"] [class*="title"]',
             '[class*="chain"] [class*="label"]',
-            '[class*="attack"] [class*="chain"]'
+            '[class*="attack"] [class*="chain"]',
+            '[class*="title"]',
+            '[class*="label"]'
         ],
         POLL_INTERVAL_MS: 300,
-        STYLE_ID: 'chain-guard-pda-styles'
+        STYLE_ID: 'chain-guard-pda-styles',
+        DEBUG_OVERLAY_ID: 'chain-guard-debug-overlay'
     };
 
     const TORN = {
@@ -60,6 +72,7 @@
     let guardPollInterval = null;
     let lastPollMode = null;
     let lastMissingChainLogKey = null;
+    let lastDebugOverlayText = '';
 
     function log(...args) {
         console.log('[Chain Guard PDA]', ...args);
@@ -289,13 +302,64 @@
                 background: linear-gradient(to bottom, #4a4a4a, #2a2a2a);
                 color: white;
             }
+            #${CONFIG.DEBUG_OVERLAY_ID} {
+                position: fixed;
+                left: 8px;
+                bottom: 8px;
+                z-index: 10000000;
+                max-width: min(92vw, 420px);
+                background: rgba(0, 0, 0, 0.9);
+                color: #7CFC8A;
+                border: 1px solid rgba(124, 252, 138, 0.45);
+                border-radius: 6px;
+                padding: 8px 10px;
+                font: 12px/1.4 monospace;
+                white-space: pre-wrap;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            }
         `;
         document.head.appendChild(style);
+    }
+
+    function ensureDebugOverlay() {
+        let overlay = document.getElementById(CONFIG.DEBUG_OVERLAY_ID);
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = CONFIG.DEBUG_OVERLAY_ID;
+            document.body.appendChild(overlay);
+        }
+        return overlay;
+    }
+
+    function setDebugOverlay(message) {
+        const settings = loadSettings();
+        const overlay = document.getElementById(CONFIG.DEBUG_OVERLAY_ID);
+
+        if (!settings.debugMode) {
+            if (overlay) overlay.remove();
+            lastDebugOverlayText = '';
+            return;
+        }
+
+        const nextText = String(message || '').trim();
+        if (!nextText || nextText === lastDebugOverlayText) return;
+
+        ensureDebugOverlay().textContent = nextText;
+        lastDebugOverlayText = nextText;
     }
 
     function logDebug(...args) {
         if (loadSettings().debugMode) {
             log(...args);
+            const debugText = args.map((arg) => {
+                if (typeof arg === 'string') return arg;
+                try {
+                    return JSON.stringify(arg);
+                } catch {
+                    return String(arg);
+                }
+            }).join(' ');
+            setDebugOverlay(debugText);
         }
     }
 
@@ -385,12 +449,32 @@
 
     function findAttackChainElement() {
         for (const selector of CONFIG.ATTACK_CHAIN_FALLBACK_SELECTORS) {
-            const el = document.querySelector(selector);
-            if (!el) continue;
+            const matches = [...document.querySelectorAll(selector)];
+            if (!matches.length) continue;
 
-            const text = el.textContent?.trim() || '';
-            if (/\d/.test(text)) {
-                return { el, selector, text };
+            for (const el of matches) {
+                const text = el.textContent?.trim() || '';
+                if (!/\d/.test(text)) continue;
+                if (/\d+\s*[:]\s*\d+/.test(text) || /chain/i.test(text) || /\d+(?:\.\d+)?\s*[kmb]?/i.test(text)) {
+                    return { el, selector, text };
+                }
+            }
+        }
+
+        return null;
+    }
+
+    function findSidebarChainElement() {
+        for (const selector of CONFIG.SIDEBAR_CHAIN_FALLBACK_SELECTORS) {
+            const matches = [...document.querySelectorAll(selector)];
+            if (!matches.length) continue;
+
+            for (const el of matches) {
+                const text = el.textContent?.trim() || '';
+                if (!text) continue;
+                if (/\//.test(text) && /\d/.test(text)) {
+                    return { el, selector, text };
+                }
             }
         }
 
@@ -402,11 +486,12 @@
 
         const fullText = el.textContent?.trim() || '';
         const spanText = el.querySelector('span')?.textContent?.trim() || '';
-        const amountMatch = fullText.match(/(\d+(?:\.\d+)?\s*[kmb]?)/i);
+        const amountMatch = fullText.match(/(?:chain\s*)?(\d+(?:\.\d+)?\s*[kmb]?)/i);
+        const timerMatch = fullText.match(/(\d+\s*:\s*\d+)/);
         const amountText = spanText || amountMatch?.[1] || '';
         const amount = parseCompactNumber(amountText);
         if (!Number.isFinite(amount)) {
-            logDebug('Attack DOM parse failed for selector', selector, 'raw text:', fullText);
+            logDebug('Attack DOM parse failed for selector', selector, 'raw text:', fullText, 'timer:', timerMatch?.[1] || 'none');
             return null;
         }
 
@@ -414,7 +499,8 @@
             amount,
             max: getNextBonus(amount) || chainState.max || 1000,
             text: fullText,
-            selector
+            selector,
+            timerText: timerMatch?.[1] || null
         };
     }
 
@@ -441,7 +527,7 @@
     function parseChainFromDOM(force = false) {
         const isAttackPage = window.location.href.includes('sid=attack');
         const attackMatch = isAttackPage ? findAttackChainElement() : null;
-        const sidebarEl = document.querySelector(CONFIG.DOM_CHAIN_SELECTOR);
+        const sidebarMatch = findSidebarChainElement();
 
         if (isAttackPage) {
             if (attackMatch) {
@@ -454,7 +540,7 @@
 
                     lastObservedChainText = observedText;
                     lastMissingChainLogKey = null;
-                    logDebug('Attack DOM parse success via', parsed.selector + ':', parsed.text, '=>', parsed.amount, '/', parsed.max);
+                    logDebug('Attack DOM parse success via', parsed.selector + ':', parsed.text, '=>', parsed.amount, '/', parsed.max, parsed.timerText ? `timer ${parsed.timerText}` : '');
                     return applyChainState(parsed.amount, parsed.max, chainState.bonuses, 'dom');
                 }
             }
@@ -466,16 +552,16 @@
             }
         }
 
-        if (!sidebarEl) {
+        if (!sidebarMatch?.el) {
             const missingKey = `${isAttackPage ? 'attack' : 'sidebar'}:missing:${window.location.href}`;
             if (lastMissingChainLogKey !== missingKey) {
                 lastMissingChainLogKey = missingKey;
-                logDebug('DOM parse skipped, chain element not found for mode:', isAttackPage ? 'attack' : 'sidebar');
+                logDebug('DOM parse skipped, sidebar chain element not found for mode:', isAttackPage ? 'attack' : 'sidebar', 'selectors:', CONFIG.SIDEBAR_CHAIN_FALLBACK_SELECTORS.join(', '));
             }
             return false;
         }
 
-        const parsed = parseSidebarChain(sidebarEl);
+        const parsed = parseSidebarChain(sidebarMatch.el);
         if (!parsed) {
             return false;
         }
@@ -487,7 +573,7 @@
 
         lastObservedChainText = observedText;
         lastMissingChainLogKey = null;
-        logDebug('Sidebar DOM parse success:', parsed.text, '=>', parsed.amount, '/', parsed.max);
+        logDebug('Sidebar DOM parse success via', sidebarMatch.selector + ':', parsed.text, '=>', parsed.amount, '/', parsed.max);
         return applyChainState(parsed.amount, parsed.max, chainState.bonuses, 'dom');
     }
 
@@ -816,6 +902,7 @@
                 saveSettings({ threshold, debugMode });
                 ignoredBonusThreshold = null;
                 log('Settings saved:', { threshold, debugMode });
+                setDebugOverlay(`Chain Guard loaded\nMode: ${window.location.href.includes('sid=attack') ? 'attack' : 'sidebar'}\nChain: ${chainState.amount}/${chainState.max}\nDebug: enabled`);
                 updateGuard();
             }
             closePanel();
@@ -827,11 +914,13 @@
         ensureStyles();
         loadChainCache();
         ensureHeaderButtonObserver();
+        setDebugOverlay(`Chain Guard script loaded\nURL: ${window.location.href}\nWaiting for DOM...`);
         ensurePolling();
         parseChainFromDOM(true);
         updateGuard();
 
         log('Ready. Current chain:', chainState.amount, '/', chainState.max, 'source:', chainState.source);
+        logDebug('Ready state', { url: window.location.href, chain: `${chainState.amount}/${chainState.max}`, source: chainState.source });
     }
 
     if (document.readyState === 'loading') {
