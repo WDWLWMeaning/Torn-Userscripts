@@ -510,7 +510,7 @@
     }
 
     function updateSettingsPanel() {
-        if (!settingsPanelRef || !document.body.contains(settingsPanelRef)) {
+        if (!settingsPanelRef || !settingsPanelRef.isConnected) {
             settingsPanelRef = null;
             return;
         }
