@@ -52,6 +52,33 @@ https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/pda/chain-guard.js
 
 ---
 
+## Meta Files (Tampermonkey)
+
+Each Tampermonkey script has a corresponding `.meta.js` file containing only the metadata block. These are automatically generated via GitLab CI.
+
+**Why meta files?** Tampermonkey uses `@updateURL` to check for updates. By pointing to a `.meta.js` file (instead of the full script), update checks are faster and use less bandwidth.
+
+**How it works:**
+- `.user.js` → full script with code
+- `.meta.js` → metadata only (version, name, description, etc.)
+
+**Example:**
+```javascript
+// ==UserScript==
+// @name         Torn Chain Guard
+// @version      1.5.3
+// @updateURL    https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/tampermonkey/chain-guard.meta.js
+// @downloadURL  https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/tampermonkey/chain-guard.user.js
+// ==/UserScript==
+```
+
+**Generate locally:**
+```bash
+./scripts/generate-meta.sh
+```
+
+---
+
 ### Mission Tracker `v3.2.1` (Tampermonkey only)
 
 Track your missions with native Torn styling.
