@@ -4,13 +4,55 @@
 
 [![Torn](https://img.shields.io/badge/Torn-API%20v2-blue)](https://www.torn.com/api.html)
 [![Tampermonkey](https://img.shields.io/badge/Tampermonkey-Compatible-green)](https://www.tampermonkey.net/)
+[![Torn PDA](https://img.shields.io/badge/Torn%20PDA-Compatible-purple)](https://github.com/Manuito83/torn-pda)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+
+---
+
+## Folder Structure
+
+```
+torn-userscripts/
+├── tampermonkey/     # Tampermonkey/Greasemonkey userscripts
+│   ├── chain-guard.user.js
+│   └── mission-tracker.user.js
+├── pda/              # Torn PDA-compatible scripts
+│   └── chain-guard.js
+├── examples.md       # Code patterns and snippets
+└── userscript.js     # Boilerplate template
+```
 
 ---
 
 ## Available Scripts
 
-### Mission Tracker `v3.2.1`
+### Chain Guard
+
+Prevents accidental attacks when near chain bonus thresholds.
+
+**Features:**
+- DOM-based chain tracking in real-time
+- Blocks attack buttons when within 15 hits of a chain bonus
+- Shows warning banner when protection is active
+- "Ignore once" button to bypass for current bonus
+- Live button text updates (counts down as chain progresses)
+- Debug mode toggle for verbose logging
+- Caches chain data for use on attack pages
+- Configurable threshold (default: 15 attacks)
+
+**Tampermonkey Install:**
+```
+https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/tampermonkey/chain-guard.user.js
+```
+
+**Torn PDA Install:** Copy the script from:
+```
+https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/pda/chain-guard.js
+```
+
+---
+
+### Mission Tracker `v3.2.1` (Tampermonkey only)
 
 Track your missions with native Torn styling.
 
@@ -26,26 +68,7 @@ Track your missions with native Torn styling.
 
 **Install:**
 ```
-https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/mission-tracker.user.js
-```
-
----
-
-### Chain Guard `v1.0.0`
-
-Prevents accidental attacks when near chain bonus thresholds.
-
-**Features:**
-- Intercepts WebSocket messages to track chain count in real-time
-- Blocks attack buttons when within 15 hits of a chain bonus
-- Shows warning banner when protection is active
-- Caches chain data for use on attack pages
-- Configurable threshold (default: 15 attacks)
-- Works even if you navigate away from the chain bar
-
-**Install:**
-```
-https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/chain-guard.user.js
+https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/tampermonkey/mission-tracker.user.js
 ```
 
 ---
@@ -55,22 +78,40 @@ https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/chain-guard.user.js
 A starter template for building your own Torn extensions.
 
 **Includes:**
-- Secure API key storage (`GM_getValue`/`GM_setValue`)
+- Secure API key storage
 - Smart caching with TTL
 - Settings panel template
 - Torn API v2 helpers
 - Clean UI components
 
-**Use this if:**
-- You want to build a custom Torn tool
-- You need a solid foundation with best practices
-- You want to learn the API v2 patterns
-
 **Get started:** Copy `userscript.js` and modify the `Features` object.
 
 ---
 
+## Platform Differences
+
+### Tampermonkey vs Torn PDA
+
+| Feature | Tampermonkey | Torn PDA |
+|---------|--------------|----------|
+| **Storage** | `GM_setValue` / `GM_getValue` | `localStorage` |
+| **HTTP Requests** | `GM_xmlhttpRequest` | `fetch()` or `PDA_httpGet/Post` |
+| **API Key** | User provides manually | `###PDA-APIKEY###` placeholder |
+| **Menu Command** | `GM_registerMenuCommand` | Not supported (use UI button) |
+| **Styling** | `GM_addStyle` | Manual `<style>` injection |
+
+**PDA-Specific Features:**
+- `###PDA-APIKEY###` — placeholder auto-replaced with user's API key
+- `PDA_httpGet(url, headers)` — cross-origin GET
+- `PDA_httpPost(url, headers, body)` — cross-origin POST
+
+See [Torn PDA Userscripts](https://github.com/Manuito83/torn-pda/tree/master/userscripts) for more.
+
+---
+
 ## Prerequisites
+
+### Tampermonkey
 
 1. **Install Tampermonkey** (Chrome/Firefox/Edge)
    - [Chrome Web Store](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo)
@@ -85,6 +126,15 @@ A starter template for building your own Torn extensions.
    - Click the install link above
    - Tampermonkey will prompt you to install
    - Enter your API key when prompted
+
+### Torn PDA
+
+1. **Install Torn PDA** from your app store
+2. Open **Settings → Advanced Browser Settings**
+3. Enable "Custom User Scripts"
+4. Tap "Manage Scripts" → "+" to add
+5. Paste the script code
+6. Set injection time (Start/End) as needed
 
 ---
 
@@ -108,7 +158,7 @@ These scripts use the **Torn API v2** for better performance and dedicated endpo
 
 ## Privacy & Security
 
-- API keys stored **locally** in your browser
+- API keys stored **locally** in your browser/device
 - No external servers — all requests go directly to Torn
 - Open source — inspect the code before installing
 - No data collection or tracking
@@ -137,6 +187,7 @@ Want to contribute or build your own?
 - [Torn API Docs](https://www.torn.com/api.html)
 - [OpenAPI Spec](https://www.torn.com/swagger/openapi.json)
 - [Tampermonkey Docs](https://www.tampermonkey.net/documentation.php)
+- [Torn PDA Scripts](https://github.com/Manuito83/torn-pda/tree/master/userscripts)
 - [Examples & Patterns](examples.md)
 
 ---
