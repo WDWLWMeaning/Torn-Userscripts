@@ -6,36 +6,50 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
-TAMPERMONKEY_DIR="$REPO_ROOT/tampermonkey"
 
 echo "Generating .meta.js files for Tampermonkey scripts..."
 echo ""
 
-# Find all .user.js files
-for user_script in "$TAMPERMONKEY_DIR"/*.user.js; do
-    if [ -f "$user_script" ]; then
-        # Get the base name without .user.js
-        base_name=$(basename "$user_script" .user.js)
-        meta_file="$TAMPERMONKEY_DIR/${base_name}.meta.js"
-        
-        echo "Processing: $(basename "$user_script") -> $(basename "$meta_file")"
-        
-        # Extract the metadata block (from ==UserScript== to ==/UserScript==)
-        awk '
-            /^\/\/ ==UserScript==$/ { printing = 1 }
-            printing { print }
-            /^\/\/ ==\/UserScript==$/ { printing = 0; exit }
-        ' "$user_script" > "$meta_file"
-        
-        if [ -s "$meta_file" ]; then
-            echo "  ✓ Created $(basename "$meta_file")"
-        else
-            echo "  ✗ Failed to extract metadata"
-            rm -f "$meta_file"
+found_any=false
+
+while read -r tampermonkey_dir; do
+    found_any=true
+
+    for user_script in "$tampermonkey_dir"/*.user.js; do
+        if [ -f "$user_script" ]; then
+            base_name=$(basename "$user_script" .user.js)
+            meta_file="$tampermonkey_dir/${base_name}.meta.js"
+
+            rel_user_script="${user_script#"$REPO_ROOT"/}"
+            rel_meta_file="${meta_file#"$REPO_ROOT"/}"
+
+            echo "Processing: $rel_user_script -> $rel_meta_file"
+
+            awk '
+                /^\/\/ ==UserScript==$/ { printing = 1 }
+                printing { print }
+                /^\/\/ ==\/UserScript==$/ { printing = 0; exit }
+            ' "$user_script" > "$meta_file"
+
+            if [ -s "$meta_file" ]; then
+                echo "  ✓ Created $rel_meta_file"
+            else
+                echo "  ✗ Failed to extract metadata"
+                rm -f "$meta_file"
+            fi
         fi
-    fi
-done
+    done
+done < <(find "$REPO_ROOT" -mindepth 2 -maxdepth 2 -type d -name tampermonkey | sort)
+
+if [ "$found_any" = false ]; then
+    echo "No tampermonkey directories found"
+fi
 
 echo ""
 echo "Meta file generation complete!"
-ls -la "$TAMPERMONKEY_DIR"/*.meta.js 2>/dev/null || echo "No .meta.js files found"
+meta_files=$(find "$REPO_ROOT" -path '*/tampermonkey/*.meta.js' -type f | sort)
+if [ -n "$meta_files" ]; then
+    printf '%s\n' "$meta_files" | sed "s#^$REPO_ROOT/##"
+else
+    echo "No .meta.js files found"
+fi

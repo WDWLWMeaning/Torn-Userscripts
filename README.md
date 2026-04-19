@@ -1,6 +1,6 @@
 # Torn Userscripts
 
-> Browser extensions for [Torn City](https://www.torn.com) — enhanced gameplay, better UI, and API-powered features.
+> Browser extensions for [Torn City](https://www.torn.com) with enhanced gameplay, better UI, and API-powered features.
 
 [![Torn](https://img.shields.io/badge/Torn-API%20v2-blue)](https://www.torn.com/api.html)
 [![Tampermonkey](https://img.shields.io/badge/Tampermonkey-Compatible-green)](https://www.tampermonkey.net/)
@@ -11,15 +11,28 @@
 
 ## Folder Structure
 
-```
+Scripts are now organized by script name first, then by platform.
+
+```text
 torn-userscripts/
-├── tampermonkey/     # Tampermonkey/Greasemonkey userscripts
-│   ├── chain-guard.user.js
-│   └── mission-tracker.user.js
-├── pda/              # Torn PDA-compatible scripts
-│   └── chain-guard.js
-├── examples.md       # Code patterns and snippets
-└── userscript.js     # Boilerplate template
+├── chain-guard/
+│   ├── tampermonkey/
+│   │   ├── chain-guard.user.js
+│   │   └── chain-guard.meta.js
+│   ├── pda/
+│   │   └── chain-guard.js
+│   ├── assets/
+│   └── README.md
+├── mission-tracker/
+│   ├── tampermonkey/
+│   │   ├── mission-tracker.user.js
+│   │   └── mission-tracker.meta.js
+│   ├── assets/
+│   └── README.md
+├── examples.md
+├── scripts/
+│   └── generate-meta.sh
+└── userscript.js
 ```
 
 ---
@@ -41,14 +54,16 @@ Prevents accidental attacks when near chain bonus thresholds.
 - Configurable threshold (default: 15 attacks)
 
 **Tampermonkey Install:**
-```
-https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/tampermonkey/chain-guard.user.js
+```text
+https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/chain-guard/tampermonkey/chain-guard.user.js
 ```
 
 **Torn PDA Install:** Copy the script from:
+```text
+https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/chain-guard/pda/chain-guard.js
 ```
-https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/pda/chain-guard.js
-```
+
+See also: [chain-guard/README.md](chain-guard/README.md)
 
 ---
 
@@ -56,7 +71,7 @@ https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/pda/chain-guard.js
 
 Each Tampermonkey script has a corresponding `.meta.js` file containing only the metadata block. These are automatically generated via GitLab CI.
 
-**Why meta files?** Tampermonkey uses `@updateURL` to check for updates. By pointing to a `.meta.js` file (instead of the full script), update checks are faster and use less bandwidth.
+**Why meta files?** Tampermonkey uses `@updateURL` to check for updates. By pointing to a `.meta.js` file instead of the full script, update checks are faster and use less bandwidth.
 
 **How it works:**
 - `.user.js` → full script with code
@@ -66,9 +81,9 @@ Each Tampermonkey script has a corresponding `.meta.js` file containing only the
 ```javascript
 // ==UserScript==
 // @name         Torn Chain Guard
-// @version      1.5.3
-// @updateURL    https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/tampermonkey/chain-guard.meta.js
-// @downloadURL  https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/tampermonkey/chain-guard.user.js
+// @version      1.6.0
+// @updateURL    https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/chain-guard/tampermonkey/chain-guard.meta.js
+// @downloadURL  https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/chain-guard/tampermonkey/chain-guard.user.js
 // ==/UserScript==
 ```
 
@@ -94,9 +109,11 @@ Track your missions with native Torn styling.
 - Settings panel with API key validation
 
 **Install:**
+```text
+https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/mission-tracker/tampermonkey/mission-tracker.user.js
 ```
-https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/tampermonkey/mission-tracker.user.js
-```
+
+See also: [mission-tracker/README.md](mission-tracker/README.md)
 
 ---
 
@@ -128,9 +145,9 @@ A starter template for building your own Torn extensions.
 | **Styling** | `GM_addStyle` | Manual `<style>` injection |
 
 **PDA-Specific Features:**
-- `###PDA-APIKEY###` — placeholder auto-replaced with user's API key
-- `PDA_httpGet(url, headers)` — cross-origin GET
-- `PDA_httpPost(url, headers, body)` — cross-origin POST
+- `###PDA-APIKEY###` , placeholder auto-replaced with user's API key
+- `PDA_httpGet(url, headers)` , cross-origin GET
+- `PDA_httpPost(url, headers, body)` , cross-origin POST
 
 See [Torn PDA Userscripts](https://github.com/Manuito83/torn-pda/tree/master/userscripts) for more.
 
@@ -175,7 +192,7 @@ These scripts use the **Torn API v2** for better performance and dedicated endpo
 | Endpoint | Purpose |
 |----------|---------|
 | `/user/missions` | Mission data |
-| `/key/info` | Key validation & permissions |
+| `/key/info` | Key validation and permissions |
 | `/user/cooldowns` | Cooldown timers |
 | `/user/money` | Financial data |
 
@@ -185,9 +202,9 @@ These scripts use the **Torn API v2** for better performance and dedicated endpo
 
 ## Privacy & Security
 
-- API keys stored **locally** in your browser/device
-- No external servers — all requests go directly to Torn
-- Open source — inspect the code before installing
+- API keys stored **locally** in your browser or device
+- No external servers, all requests go directly to Torn
+- Open source, inspect the code before installing
 - No data collection or tracking
 
 ---
