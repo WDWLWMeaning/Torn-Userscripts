@@ -1,4 +1,4 @@
-# 🎮 Torn Userscripts
+# Torn Userscripts
 
 > Browser extensions for [Torn City](https://www.torn.com) — enhanced gameplay, better UI, and API-powered features.
 
@@ -8,41 +8,39 @@
 
 ---
 
-## 📦 Available Scripts
+## Available Scripts
 
-### 🔥 Mission Tracker `v2.0.6`
-Track your missions and never miss a deadline again.
+### Mission Tracker `v3.2.1`
 
-**What it does:**
-- Shows a badge on the **Missions** button with count of incomplete missions
-- 🔴 **Red badge** = Mission expires in <24 hours (pulses for urgency)
-- 🟡 **Yellow badge** = Mission expires in <48 hours
-- 🔵 **Blue badge** = No urgency
-- Updates every 5 minutes with smart caching
+Track your missions with native Torn styling.
 
 **Features:**
-- ✅ Mobile & desktop responsive
-- ✅ Persists across page navigation
-- ✅ Settings panel with API key validation
-- ✅ Shows your key's access level and permissions
+- Badge on the **Missions** button showing incomplete mission count
+- **Red badge** = Mission expires in <24 hours (pulses for urgency)
+- **Yellow badge** = Mission expires in <48 hours
+- **Blue badge** = No urgency
+- Updates every 5 minutes with smart caching
+- Mobile and desktop responsive
+- Persists across page navigation
+- Settings panel with API key validation
 
 **Install:**
 ```
-https://git.er-ic.ca/Kevin/torn-userscripts/-/raw/main/mission-tracker.user.js?ref_type=heads
+https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/mission-tracker.user.js
 ```
 
 ---
 
-### 🚀 Userscript Boilerplate
-A complete starter template for building your own Torn extensions.
+### Userscript Boilerplate `v2.0.1`
+
+A starter template for building your own Torn extensions.
 
 **Includes:**
-- 🔐 Secure API key storage (`GM_getValue`/`GM_setValue`)
-- 💾 Smart caching with TTL
-- ⚙️ Settings panel template
-- 🔔 Notification system
-- 📡 Torn API v2 helpers
-- 🎨 Clean UI components
+- Secure API key storage (`GM_getValue`/`GM_setValue`)
+- Smart caching with TTL
+- Settings panel template
+- Torn API v2 helpers
+- Clean UI components
 
 **Use this if:**
 - You want to build a custom Torn tool
@@ -53,7 +51,7 @@ A complete starter template for building your own Torn extensions.
 
 ---
 
-## 🛠️ Prerequisites
+## Prerequisites
 
 1. **Install Tampermonkey** (Chrome/Firefox/Edge)
    - [Chrome Web Store](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo)
@@ -71,7 +69,7 @@ A complete starter template for building your own Torn extensions.
 
 ---
 
-## 🧩 API v2 Information
+## API v2 Information
 
 These scripts use the **Torn API v2** for better performance and dedicated endpoints.
 
@@ -89,16 +87,16 @@ These scripts use the **Torn API v2** for better performance and dedicated endpo
 
 ---
 
-## 🔒 Privacy & Security
+## Privacy & Security
 
-- ✅ API keys stored **locally** in your browser
-- ✅ No external servers — all requests go directly to Torn
-- ✅ Open source — inspect the code before installing
-- ✅ No data collection or tracking
+- API keys stored **locally** in your browser
+- No external servers — all requests go directly to Torn
+- Open source — inspect the code before installing
+- No data collection or tracking
 
 ---
 
-## 📝 Development
+## Development
 
 Want to contribute or build your own?
 
@@ -115,7 +113,7 @@ Want to contribute or build your own?
 
 ---
 
-## 📚 Resources
+## Resources
 
 - [Torn API Docs](https://www.torn.com/api.html)
 - [OpenAPI Spec](https://www.torn.com/swagger/openapi.json)
@@ -124,7 +122,7 @@ Want to contribute or build your own?
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Found a bug? Want a new feature?
 
@@ -134,4 +132,4 @@ Found a bug? Want a new feature?
 
 ---
 
-Made with ☕ for the Torn community
+Made for the Torn community
