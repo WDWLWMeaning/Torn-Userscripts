@@ -29,7 +29,9 @@
     const CONFIG = {
         DEFAULT_THRESHOLD: 15,
         CACHE_KEY: 'chain_guard_data',
-        SETTINGS_KEY: 'chain_guard_settings'
+        SETTINGS_KEY: 'chain_guard_settings',
+        BONUS_THRESHOLDS: [10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000],
+        DOM_CHAIN_SELECTOR: '.bar-value___uxnah'
     };
 
     // Torn-native color palette
@@ -51,8 +53,16 @@
         amount: 0,
         max: 1000,
         bonuses: 1.0,
-        lastUpdate: 0
+        lastUpdate: 0,
+        source: 'cache'
     };
+
+    let lastDangerZoneState = null;
+    let domObserver = null;
+
+    function log(...args) {
+        console.log('[Chain Guard]', ...args);
+    }
 
     // Load settings
     function loadSettings() {
@@ -76,8 +86,8 @@
             const data = JSON.parse(cached);
             // Only use cache if less than 5 minutes old
             if (Date.now() - data.lastUpdate < 300000) {
-                chainState = data;
-                console.log('[Chain Guard] Loaded cached chain:', chainState.amount, '/', chainState.max);
+                chainState = { ...chainState, ...data, source: data.source || 'cache' };
+                log('Loaded cached chain:', chainState.amount, '/', chainState.max, 'source:', chainState.source);
             }
         } catch {
             // No valid cache
@@ -90,23 +100,83 @@
         GM_setValue(CONFIG.CACHE_KEY, JSON.stringify(chainState));
     }
 
+    function getNextBonus(amount) {
+        return CONFIG.BONUS_THRESHOLDS.find((threshold) => amount < threshold) || null;
+    }
+
+    function applyChainState(amount, max, bonuses, source) {
+        if (!Number.isFinite(amount)) return false;
+
+        const normalizedMax = Number.isFinite(max) && max > 0 ? max : (getNextBonus(amount) || 1000);
+        chainState.amount = amount;
+        chainState.max = normalizedMax;
+        chainState.bonuses = Number.isFinite(bonuses) ? bonuses : chainState.bonuses;
+        chainState.source = source;
+        saveChainCache();
+        log('Chain updated from', source + ':', chainState.amount, '/', chainState.max);
+        updateGuard();
+        return true;
+    }
+
     // Parse chain data from WebSocket message
     function parseChainData(data) {
         try {
-            if (data?.push?.pub?.data?.message?.namespaces?.sidebar?.actions?.updateChain?.chain) {
-                const chain = data.push.pub.data.message.namespaces.sidebar.actions.updateChain.chain;
-                if (chain.amount !== undefined) {
-                    chainState.amount = parseInt(chain.amount, 10);
-                    chainState.max = parseInt(chain.max, 10) || 1000;
-                    chainState.bonuses = parseFloat(chain.bonuses) || 1.0;
-                    saveChainCache();
-                    console.log('[Chain Guard] Chain updated:', chainState.amount, '/', chainState.max);
-                    updateGuard();
-                }
+            const chain = data?.push?.pub?.data?.message?.namespaces?.sidebar?.actions?.updateChain?.chain;
+            if (!chain) {
+                log('WebSocket payload did not contain chain data');
+                return false;
             }
+
+            const amount = parseInt(chain.amount, 10);
+            const max = parseInt(chain.max, 10);
+            const bonuses = parseFloat(chain.bonuses);
+
+            if (applyChainState(amount, max, bonuses, 'websocket')) {
+                log('WebSocket chain parse success');
+                return true;
+            }
+
+            log('WebSocket chain parse failed, invalid amount:', chain.amount);
+            return false;
         } catch (e) {
-            console.log('[Chain Guard] Parse error:', e);
+            log('WebSocket chain parse error:', e);
+            return false;
         }
+    }
+
+    function parseCompactNumber(value) {
+        const normalized = String(value).trim().toLowerCase().replace(/,/g, '');
+        const match = normalized.match(/^(\d+(?:\.\d+)?)([kmb])?$/);
+        if (!match) return NaN;
+
+        const base = parseFloat(match[1]);
+        const multiplier = match[2] === 'k' ? 1000 : match[2] === 'm' ? 1000000 : match[2] === 'b' ? 1000000000 : 1;
+        return Math.round(base * multiplier);
+    }
+
+    function parseChainFromDOM() {
+        const el = document.querySelector(CONFIG.DOM_CHAIN_SELECTOR);
+        if (!el) {
+            log('DOM parse skipped, chain element not found');
+            return false;
+        }
+
+        const text = el.textContent.trim();
+        const match = text.match(/([^/]+)\s*\/\s*([^\s]+)/);
+        if (!match) {
+            log('DOM parse failed, unexpected text:', text);
+            return false;
+        }
+
+        const amount = parseCompactNumber(match[1]);
+        const max = parseCompactNumber(match[2]);
+        if (!Number.isFinite(amount) || !Number.isFinite(max)) {
+            log('DOM parse failed, invalid values:', text);
+            return false;
+        }
+
+        log('DOM parse success:', text, '=>', amount, '/', max);
+        return applyChainState(amount, max, chainState.bonuses, 'dom');
     }
 
     // Check if we're in the danger zone
@@ -124,16 +194,22 @@
     // Override WebSocket to intercept messages
     function hookWebSocket() {
         const OriginalWebSocket = window.WebSocket;
+        log('Hooking WebSocket interceptor');
 
         window.WebSocket = function(url, protocols) {
+            log('WebSocket constructed:', url);
             const ws = new OriginalWebSocket(url, protocols);
 
             ws.addEventListener('message', (event) => {
+                log('WebSocket message received');
                 try {
                     const data = JSON.parse(event.data);
-                    parseChainData(data);
-                } catch {
-                    // Not JSON, ignore
+                    const parsed = parseChainData(data);
+                    if (!parsed) {
+                        log('WebSocket message parsed as JSON, but no usable chain update found');
+                    }
+                } catch (error) {
+                    log('WebSocket message JSON parse failed:', error);
                 }
             });
 
@@ -143,6 +219,7 @@
         // Copy static properties
         Object.setPrototypeOf(window.WebSocket, OriginalWebSocket);
         window.WebSocket.prototype = OriginalWebSocket.prototype;
+        log('WebSocket interceptor installed');
     }
 
     // Create warning banner
@@ -263,6 +340,7 @@
     // Prevent attack click
     function preventAttack(e) {
         if (isInDangerZone()) {
+            log('Attack blocked,', getDistanceToBonus(), 'attacks away from bonus');
             e.preventDefault();
             e.stopPropagation();
             alert(`Chain Guard: You are only ${getDistanceToBonus()} attacks away from a chain bonus!\n\nDisable protection in the Chain Guard menu if you really want to attack.`);
@@ -282,11 +360,35 @@
         });
     }
 
+    function ensureDomObserver() {
+        if (domObserver) return;
+
+        domObserver = new MutationObserver(() => {
+            if (parseChainFromDOM()) {
+                log('DOM fallback observer applied chain update');
+            }
+        });
+
+        domObserver.observe(document.documentElement || document, {
+            subtree: true,
+            childList: true,
+            characterData: true
+        });
+
+        log('DOM fallback observer started');
+    }
+
     // Update guard state
     function updateGuard() {
         const isAttackPage = window.location.href.includes('sid=attack');
+        const inDangerZone = isInDangerZone();
 
-        if (isInDangerZone()) {
+        if (lastDangerZoneState !== inDangerZone) {
+            log(inDangerZone ? 'Entered danger zone' : 'Exited danger zone');
+            lastDangerZoneState = inDangerZone;
+        }
+
+        if (inDangerZone) {
             createWarningBanner();
             if (isAttackPage) {
                 blockAttackButtons();
@@ -453,7 +555,7 @@
             const threshold = parseInt(panel.querySelector('#cg-threshold').value, 10);
             if (threshold > 0) {
                 saveSettings({ threshold });
-                console.log('[Chain Guard] Settings saved:', threshold);
+                log('Settings saved:', threshold);
                 updateGuard();
             }
             panel.remove();
@@ -462,7 +564,7 @@
 
     // Initialize
     function init() {
-        console.log('[Chain Guard] Initializing...');
+        log('Init start');
 
         // Load cached chain data
         loadChainCache();
@@ -470,12 +572,18 @@
         // Hook WebSocket early
         hookWebSocket();
 
+        // Start DOM fallback for when websocket updates are missing
+        ensureDomObserver();
+        parseChainFromDOM();
+
         // Watch for URL changes (SPA navigation)
         let lastUrl = location.href;
         new MutationObserver(() => {
             const url = location.href;
             if (url !== lastUrl) {
                 lastUrl = url;
+                log('URL changed, refreshing guard state:', url);
+                parseChainFromDOM();
                 updateGuard();
             }
         }).observe(document, { subtree: true, childList: true });
@@ -485,13 +593,16 @@
 
         // Periodic check for attack buttons (they load dynamically)
         if (window.location.href.includes('sid=attack')) {
-            setInterval(updateGuard, 1000);
+            setInterval(() => {
+                parseChainFromDOM();
+                updateGuard();
+            }, 1000);
         }
 
         // Register menu command
         GM_registerMenuCommand('Chain Guard Settings', openSettings);
 
-        console.log('[Chain Guard] Ready. Current chain:', chainState.amount, '/', chainState.max);
+        log('Ready. Current chain:', chainState.amount, '/', chainState.max, 'source:', chainState.source);
     }
 
     // Start when DOM is ready
