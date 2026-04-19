@@ -31,6 +31,25 @@ https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/mission-tracker.user.js
 
 ---
 
+### Chain Guard `v1.0.0`
+
+Prevents accidental attacks when near chain bonus thresholds.
+
+**Features:**
+- Intercepts WebSocket messages to track chain count in real-time
+- Blocks attack buttons when within 15 hits of a chain bonus
+- Shows warning banner when protection is active
+- Caches chain data for use on attack pages
+- Configurable threshold (default: 15 attacks)
+- Works even if you navigate away from the chain bar
+
+**Install:**
+```
+https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/chain-guard.user.js
+```
+
+---
+
 ### Userscript Boilerplate `v2.0.1`
 
 A starter template for building your own Torn extensions.
