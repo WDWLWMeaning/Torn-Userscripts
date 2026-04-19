@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Guard (PDA)
 // @namespace    torn-chain-guard
-// @version      1.5.0
+// @version      1.5.1
 // @description  Prevents accidental attacks when within range of a chain bonus threshold
 // @author       Kevin
 // @match        https://www.torn.com/*
