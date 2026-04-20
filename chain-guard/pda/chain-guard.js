@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Guard (PDA)
 // @namespace    torn-chain-guard
-// @version      2.0.2
+// @version      2.0.3
 // @description  Prevents accidental attacks when within range of a chain bonus threshold (uses shared PDA menu)
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -67,13 +67,85 @@
             _toggle() { if (this._dropdown) { this._dropdown.remove(); this._dropdown = null; } else this._show(); },
             _show() {
                 const d = document.createElement('div'); d.id = 'pda-shared-menu'; d.className = 'open';
-                const r = this._button.getBoundingClientRect(); const W = 320; let l = r.left; if (l + W > window.innerWidth - 10) l = window.innerWidth - W - 10;
-                d.style.cssText = `position:fixed;top:${r.bottom + 8}px;left:${l}px;width:${W}px;max-height:80vh;background:${STYLES.bg};border:1px solid ${STYLES.border};border-radius:8px;z-index:99998;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.5);font-family:Arial,sans-serif;color:${STYLES.text};`;
+                const r = this._button.getBoundingClientRect(); const W = 320; const H = Math.min(400, window.innerHeight * 0.7);
+                const margin = 10;
+                
+                // Determine position: if button is on right half, menu goes to left
+                const buttonCenter = r.left + r.width / 2;
+                const screenCenter = window.innerWidth / 2;
+                const isRightSide = buttonCenter > screenCenter;
+                
+                let left, top;
+                if (isRightSide) {
+                    // Position to left of button
+                    left = Math.max(margin, r.left - W - 8);
+                } else {
+                    // Position to right of button (or aligned with it)
+                    left = Math.min(r.left, window.innerWidth - W - margin);
+                }
+                
+                // Vertical position: try below first, if not enough space, go above
+                const spaceBelow = window.innerHeight - r.bottom - margin;
+                const spaceAbove = r.top - margin;
+                if (spaceBelow >= 200 || spaceBelow >= spaceAbove) {
+                    top = r.bottom + 8;
+                } else {
+                    top = Math.max(margin, r.top - H - 8);
+                }
+                
+                d.style.cssText = `position:fixed;top:${top}px;left:${left}px;width:${W}px;max-height:${H}px;background:${STYLES.bg};border:1px solid ${STYLES.border};border-radius:8px;z-index:99998;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.5);font-family:Arial,sans-serif;color:${STYLES.text};`;
+                
+                // Store current position for drag updates
+                this._menuPos = { top, left };
+                
                 const h = document.createElement('div'); h.style.cssText = `padding:12px 16px;border-bottom:1px solid ${STYLES.border};font-weight:bold;font-size:14px;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(180deg,#3a3a3a 0%,${STYLES.bg} 100%);border-radius:8px 8px 0 0;`; h.innerHTML = `<span>🎮 PDA Scripts</span><span style="color:${STYLES.textMuted};font-size:12px;font-weight:normal">${this._scripts.size} active</span>`; d.appendChild(h);
                 if (this._scripts.size === 0) { const e = document.createElement('div'); e.style.cssText = `padding:24px;text-align:center;color:${STYLES.textMuted};`; e.textContent = 'No scripts registered'; d.appendChild(e); }
                 else this._scripts.forEach(s => d.appendChild(this._createSection(s)));
                 const close = e => { if (!d.contains(e.target) && e.target !== this._button) { d.remove(); this._dropdown = null; document.removeEventListener('click', close); } };
                 setTimeout(() => document.addEventListener('click', close), 0); document.body.appendChild(d); this._dropdown = d;
+                
+                // Start position tracking during drag
+                this._startPositionTracking();
+            },
+            _startPositionTracking() {
+                if (this._posTrackingInterval) clearInterval(this._posTrackingInterval);
+                this._posTrackingInterval = setInterval(() => {
+                    if (!this._dropdown || !this._button) {
+                        clearInterval(this._posTrackingInterval);
+                        this._posTrackingInterval = null;
+                        return;
+                    }
+                    this._updateMenuPosition();
+                }, 50); // Update every 50ms during drag
+            },
+            _updateMenuPosition() {
+                if (!this._dropdown || !this._button) return;
+                
+                const r = this._button.getBoundingClientRect();
+                const W = 320; const H = Math.min(400, window.innerHeight * 0.7);
+                const margin = 10;
+                
+                const buttonCenter = r.left + r.width / 2;
+                const screenCenter = window.innerWidth / 2;
+                const isRightSide = buttonCenter > screenCenter;
+                
+                let left, top;
+                if (isRightSide) {
+                    left = Math.max(margin, r.left - W - 8);
+                } else {
+                    left = Math.min(r.left, window.innerWidth - W - margin);
+                }
+                
+                const spaceBelow = window.innerHeight - r.bottom - margin;
+                const spaceAbove = r.top - margin;
+                if (spaceBelow >= 200 || spaceBelow >= spaceAbove) {
+                    top = r.bottom + 8;
+                } else {
+                    top = Math.max(margin, r.top - H - 8);
+                }
+                
+                this._dropdown.style.top = top + 'px';
+                this._dropdown.style.left = left + 'px';
             },
             _createSection(s) {
                 const sec = document.createElement('div'); sec.style.cssText = `border-bottom:1px solid ${STYLES.border};`;
@@ -345,7 +417,7 @@
 
     // Init
     function init() {
-        log('v2.0.2 initializing...');
+        log('v2.0.3 initializing...');
         ensureStyles();
         loadChainCache();
         registerWithSharedMenu();
