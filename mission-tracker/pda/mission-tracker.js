@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Torn Mission Tracker (PDA)
 // @namespace    torn-mission-tracker
-// @version      4.0.1
-// @description  Track Torn missions with alerts for urgent missions (uses shared PDA menu)
+// @version      4.0.2
+// @description  Track Torn missions with alerts. Uses ###PDA-APIKEY### for automatic API access.
 // @author       Kevin
 // @match        https://www.torn.com/*
 // ==/UserScript==
@@ -10,6 +10,9 @@
 // Self-initializing shared menu - creates PDAScriptsMenu if not already present
 (function() {
     'use strict';
+
+    // PDA will replace this placeholder with the actual API key at runtime
+    const PDA_API_KEY = "_###PDA-APIKEY###_";
 
     // ============================================
     // SHARED MENU INITIALIZER (runs once globally)
@@ -86,8 +89,8 @@
         apiBaseUrl: 'https://api.torn.com/v2',
         updateInterval: 5 * 60 * 1000,
         cacheTtlMinutes: 5,
-        urgentHours: 24,
-        warningHours: 48
+        get urgentHours() { return window.PDAScriptsMenu?.getSetting('missionTracker', 'urgentHours', 24) ?? 24; },
+        get warningHours() { return window.PDAScriptsMenu?.getSetting('missionTracker', 'warningHours', 48) ?? 48; }
     };
 
     const TORN = {
@@ -126,7 +129,12 @@
     }
 
     function getApiKey() {
-        // Use shared menu if available
+        // PDA replaces ###PDA-APIKEY### at runtime - check if it's been replaced
+        const pdaKey = PDA_API_KEY.replace(/^_+|_+$/g, ''); // Remove placeholder underscores if present
+        if (pdaKey && pdaKey !== '###PDA-APIKEY###' && pdaKey.length > 10) {
+            return pdaKey;
+        }
+        // Fallback to manual setting if PDA key not available
         if (window.PDAScriptsMenu) {
             return window.PDAScriptsMenu.getSetting('missionTracker', 'apiKey', '');
         }
@@ -268,24 +276,31 @@
         window.PDAScriptsMenu.register('missionTracker', '📋 Mission Tracker', {
             fields: [
                 {
-                    key: 'apiKey',
-                    label: 'Torn API Key (Limited access with "missions" selection)',
-                    type: 'text',
-                    default: ''
+                    key: 'urgentHours',
+                    label: 'Urgent Alert Threshold (hours)',
+                    type: 'number',
+                    default: 24
+                },
+                {
+                    key: 'warningHours',
+                    label: 'Warning Alert Threshold (hours)',
+                    type: 'number',
+                    default: 48
                 }
             ],
             onChange: (key) => {
-                if (key === 'apiKey') {
-                    log('API key updated');
-                    refresh(true);
-                }
+                log('Setting changed:', key);
+                // Update config from settings
+                CONFIG.urgentHours = window.PDAScriptsMenu.getSetting('missionTracker', 'urgentHours', 24);
+                CONFIG.warningHours = window.PDAScriptsMenu.getSetting('missionTracker', 'warningHours', 48);
+                refresh(true);
             }
         });
         log('✓ Registered with shared menu');
     }
 
     function init() {
-        log('v4.0.1 initializing...');
+        log('v4.0.2 initializing...');
         registerWithSharedMenu();
 
         refresh();
