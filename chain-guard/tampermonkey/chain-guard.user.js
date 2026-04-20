@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Guard
 // @namespace    torn-chain-guard
-// @version      1.6.1
+// @version      1.6.2
 // @description  Prevents accidental attacks when within range of a chain bonus threshold
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -285,7 +285,7 @@
                     <div class="cg-title">Chain Bonus Protection Active</div>
                     <div class="cg-subtitle"></div>
                 </div>
-                <button type="button" class="cg-ignore">Ignore once</button>
+                <button type="button" class="cg-ignore">Ignore</button>
             `;
 
             GM_addStyle(`
@@ -446,7 +446,7 @@
             logDebug('Attack blocked/intercepted,', getDistanceToBonus(), 'attacks away from bonus');
             e.preventDefault();
             e.stopPropagation();
-            alert(`Chain Guard: You are only ${getDistanceToBonus()} attacks away from a chain bonus!\n\nClick Ignore once in the warning banner if you really want to attack.`);
+            alert(`Chain Guard: You are only ${getDistanceToBonus()} attacks away from a chain bonus!\n\nClick Ignore in the warning banner if you really want to attack.`);
             return false;
         }
     }
