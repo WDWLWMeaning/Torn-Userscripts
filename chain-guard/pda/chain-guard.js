@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Guard (PDA)
 // @namespace    torn-chain-guard
-// @version      2.0.4
+// @version      2.0.5
 // @description  Prevents accidental attacks when within range of a chain bonus threshold (uses shared PDA menu)
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -445,18 +445,32 @@
 
     // Init
     function init() {
-        log('v2.0.4 initializing...');
-        ensureStyles();
-        loadChainCache();
-        registerWithSharedMenu();
+        try {
+            log('v2.0.5 initializing...');
+            ensureStyles();
+            loadChainCache();
+            registerWithSharedMenu();
 
-        chainPollInterval = setInterval(() => {
-            if (parseChainFromDOM()) updateGuard();
-        }, CONFIG.POLL_INTERVAL_MS);
+            chainPollInterval = setInterval(() => {
+                try {
+                    if (parseChainFromDOM()) updateGuard();
+                } catch (e) {
+                    log('Chain poll error:', e.message);
+                }
+            }, CONFIG.POLL_INTERVAL_MS);
 
-        guardPollInterval = setInterval(updateGuard, CONFIG.POLL_INTERVAL_MS);
+            guardPollInterval = setInterval(() => {
+                try {
+                    updateGuard();
+                } catch (e) {
+                    log('Guard poll error:', e.message);
+                }
+            }, CONFIG.POLL_INTERVAL_MS);
 
-        log('Chain polling started');
+            log('Chain polling started');
+        } catch (err) {
+            log('Init error:', err.message);
+        }
     }
 
     if (document.readyState === 'loading') {

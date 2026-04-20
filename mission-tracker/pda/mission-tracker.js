@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Mission Tracker (PDA)
 // @namespace    torn-mission-tracker
-// @version      4.0.8
+// @version      4.0.9
 // @description  Track Torn missions with alerts. Uses PDA-APIKEY placeholder for automatic API access.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -438,24 +438,35 @@
     }
 
     function init() {
-        log('v4.0.8 initializing...');
-        registerWithSharedMenu();
+        try {
+            log('v4.0.9 initializing...');
+            registerWithSharedMenu();
 
-        refresh();
+            // Initial refresh with error handling
+            refresh().catch(err => log('Initial refresh error:', err.message));
 
-        if (updateTimer) clearInterval(updateTimer);
-        updateTimer = setInterval(refresh, CONFIG.updateInterval);
+            if (updateTimer) clearInterval(updateTimer);
+            updateTimer = setInterval(() => {
+                refresh().catch(err => log('Interval refresh error:', err.message));
+            }, CONFIG.updateInterval);
 
-        // Re-attach badge if nav changes
-        new MutationObserver(() => {
-            if (!document.getElementById('mt-mission-badge')) {
-                badgeElement = null;
-                const cached = getCache('missions');
-                if (cached) updateBadge(processMissions(cached));
-            }
-        }).observe(document.body, { childList: true, subtree: true });
+            // Re-attach badge if nav changes
+            new MutationObserver(() => {
+                try {
+                    if (!document.getElementById('mt-mission-badge')) {
+                        badgeElement = null;
+                        const cached = getCache('missions');
+                        if (cached) updateBadge(processMissions(cached));
+                    }
+                } catch (e) {
+                    log('Observer error:', e.message);
+                }
+            }).observe(document.body, { childList: true, subtree: true });
 
-        log('Mission polling started');
+            log('Mission polling started');
+        } catch (err) {
+            log('Init error:', err.message);
+        }
     }
 
     if (document.readyState === 'loading') {
