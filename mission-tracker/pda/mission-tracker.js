@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Torn Mission Tracker (PDA)
 // @namespace    torn-mission-tracker
-// @version      5.0.0
-// @description  Shows red/yellow badge on Missions button based on mission status. Red = unaccepted Available missions. Yellow = active Accepted missions. Uses PDA-APIKEY for automatic API access.
+// @version      5.1.0
+// @description  Track Torn missions with time-based alerts. Red = urgent (<24h), Yellow = warning (<48h). Uses PDA-APIKEY for automatic API access.
 // @author       Kevin
 // @match        https://www.torn.com/*
 // ==/UserScript==
@@ -85,14 +85,25 @@
     }
 
     // ============================================
-    // MISSION TRACKER CODE
+    // MISSION TRACKER CODE (Original Tampermonkey logic)
     // ============================================
     const CONFIG = {
-        updateInterval: 30000,
-        cacheTtlMinutes: 5
+        updateInterval: 60000,
+        cacheTtlMinutes: 5,
+        urgentHours: 24,
+        warningHours: 48
     };
 
     let updateTimer = null;
+    let badgeElement = null;
+
+    const TORN = {
+        red: '#E54C19',
+        yellow: '#F08C00',
+        panel: '#333',
+        border: '#555',
+        text: '#ddd'
+    };
 
     function log(...args) { console.log('[Mission Tracker]', ...args); }
 
@@ -143,16 +154,25 @@
         }
     }
 
-    function countMissions(data) {
-        const givers = data?.missions?.givers || data?.givers || [];
-        let available = 0, accepted = 0;
+    function processMissions(payload) {
+        const givers = payload?.missions?.givers || payload?.givers || [];
+        if (!Array.isArray(givers)) return { count: 0, urgent: false, warning: false };
+
+        const now = Date.now() / 1000;
+        let count = 0, urgent = false, warning = false;
+
         for (const giver of givers) {
-            for (const contract of giver.contracts || []) {
-                if (contract.status === 'Available') available++;
-                if (contract.status === 'Accepted') accepted++;
+            for (const mission of (giver?.contracts || [])) {
+                if (mission.status !== 'Accepted' && mission.status !== 'Available') continue;
+                count++;
+                if (mission.status === 'Accepted' && mission.expires_at) {
+                    const hours = (mission.expires_at - now) / 3600;
+                    if (hours > 0 && hours <= CONFIG.urgentHours) urgent = true;
+                    else if (hours > 0 && hours <= CONFIG.warningHours) warning = true;
+                }
             }
         }
-        return { available, accepted };
+        return { count, urgent, warning: warning && !urgent };
     }
 
     function ensureStyles() {
@@ -176,69 +196,99 @@
                 pointer-events: none;
                 z-index: 100;
                 box-sizing: border-box;
+                background: ${TORN.panel};
+                border: 1px solid ${TORN.border};
             }
-            #mt-mission-badge.red { background: #e23d3d; }
-            #mt-mission-badge.yellow { background: #e0a800; color: #000; }
-            #nav-missions.mission-tint-yellow { background: rgba(224,168,0,0.15) !important; border-radius: 5px; }
-            #nav-missions.mission-tint-red { background: rgba(226,61,61,0.15) !important; border-radius: 5px; }
+            #mt-mission-badge.urgent {
+                background: ${TORN.red};
+                box-shadow: 0 0 8px rgba(229,76,25,0.6);
+            }
+            #mt-mission-badge.warning {
+                background: ${TORN.yellow};
+                color: #000;
+            }
         `;
         document.head.appendChild(style);
     }
 
-    function getMissionLinks() {
-        return document.querySelectorAll('#nav-missions a');
-    }
-
-    function ensureBadge(link, className, count) {
-        ensureStyles();
-        let badge = link.querySelector('#mt-mission-badge');
-        if (!badge) {
-            badge = document.createElement('span');
-            badge.id = 'mt-mission-badge';
-            link.style.position = 'relative';
-            link.appendChild(badge);
-        }
-        badge.textContent = count;
-        badge.className = '';
-        badge.classList.add(className);
-        badge.style.display = '';
-    }
-
-    function removeBadge(link) {
-        const badge = link.querySelector('#mt-mission-badge');
-        if (badge) badge.style.display = 'none';
-    }
-
-    function setTint(tintClass) {
+    function getMissionLink() {
+        // Try to find the missions link
         const nav = document.getElementById('nav-missions');
-        if (!nav) return;
-        nav.classList.remove('mission-tint-yellow', 'mission-tint-red');
-        if (tintClass) nav.classList.add(tintClass);
+        if (nav) {
+            const link = nav.querySelector('a');
+            if (link) return link;
+        }
+        // Fallback selectors
+        const selectors = [
+            'a[href*="sid=missions"]',
+            'a[href*="/missions.php"]',
+            '[class*="nav"] a[href*="mission"]'
+        ];
+        for (const sel of selectors) {
+            const el = document.querySelector(sel);
+            if (el) return el;
+        }
+        return null;
     }
 
-    async function update() {
+    function createBadge(link) {
+        if (!link) return null;
+        ensureStyles();
+
+        // Remove existing
+        const existing = link.querySelector('#mt-mission-badge');
+        if (existing) existing.remove();
+
+        const badge = document.createElement('span');
+        badge.id = 'mt-mission-badge';
+
+        // Ensure relative positioning on link
+        if (link.style.position !== 'relative' && link.style.position !== 'absolute') {
+            link.style.position = 'relative';
+        }
+
+        link.appendChild(badge);
+        return badge;
+    }
+
+    function updateBadge(status) {
+        const link = getMissionLink();
+        if (!link) {
+            log('Missions link not found');
+            return;
+        }
+
+        if (!badgeElement || !link.contains(badgeElement)) {
+            badgeElement = createBadge(link);
+        }
+
+        if (!badgeElement) return;
+
+        if (status.count === 0) {
+            badgeElement.style.display = 'none';
+            return;
+        }
+
+        badgeElement.style.display = 'inline-flex';
+        badgeElement.textContent = status.count;
+        badgeElement.className = status.urgent ? 'urgent' : status.warning ? 'warning' : '';
+    }
+
+    async function refresh(force = false) {
         if (!getApiKey()) {
             log('No API key configured');
             return;
         }
         try {
-            let data = getCache('missions');
-            if (!data) {
-                data = await apiRequest('/user/missions');
-                setCache('missions', data);
+            if (force) setCache('missions', null);
+            let missions = getCache('missions');
+            if (!missions) {
+                missions = await apiRequest('/user/missions');
+                setCache('missions', missions);
             }
-            const { available, accepted } = countMissions(data);
-
-            getMissionLinks().forEach(link => {
-                if (available > 0) ensureBadge(link, 'red', available);
-                else if (accepted > 0) ensureBadge(link, 'yellow', accepted);
-                else removeBadge(link);
-            });
-
-            if (accepted >= 3) setTint('mission-tint-red');
-            else if (accepted >= 1) setTint('mission-tint-yellow');
-            else setTint(null);
-
+            const status = processMissions(missions);
+            updateBadge(status);
+            log('Updated:', status);
         } catch (err) {
             log('Error:', err.message);
         }
@@ -250,21 +300,39 @@
             return;
         }
         window.PDAScriptsMenu.register('missionTracker', '📋 Mission Tracker', {
-            fields: [{ key: 'apiKey', label: 'API Key (optional - PDA auto-fills)', type: 'number' }]
+            fields: [
+                { key: 'urgentHours', label: 'Urgent Alert Threshold (hours)', type: 'number', default: 24 },
+                { key: 'warningHours', label: 'Warning Alert Threshold (hours)', type: 'number', default: 48 }
+            ],
+            onChange: (key) => {
+                CONFIG.urgentHours = window.PDAScriptsMenu.getSetting('missionTracker', 'urgentHours', 24);
+                CONFIG.warningHours = window.PDAScriptsMenu.getSetting('missionTracker', 'warningHours', 48);
+                refresh(true);
+            }
         });
         log('✓ Registered with shared menu');
     }
 
     function init() {
-        log('v5.0.0 initializing...');
+        log('v5.1.0 initializing...');
         registerWithSharedMenu();
 
         // Wait for nav to exist
         const waitForNav = setInterval(() => {
-            if (document.getElementById('nav-missions')) {
+            if (getMissionLink()) {
                 clearInterval(waitForNav);
-                update();
-                updateTimer = setInterval(update, CONFIG.updateInterval);
+                refresh();
+                updateTimer = setInterval(refresh, CONFIG.updateInterval);
+
+                // Re-attach badge if nav changes
+                new MutationObserver(() => {
+                    const link = getMissionLink();
+                    if (link && !link.querySelector('#mt-mission-badge')) {
+                        badgeElement = null;
+                        const cached = getCache('missions');
+                        if (cached) updateBadge(processMissions(cached));
+                    }
+                }).observe(document.body, { childList: true, subtree: true });
             }
         }, 500);
     }
