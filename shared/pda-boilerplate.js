@@ -91,7 +91,11 @@
         const hamburger = findHamburgerMenu();
         if (!hamburger) return null;
 
-        // Create shared container
+        // Try to find the header-menu container
+        const headerMenu = hamburger.closest('.header-menu, [class*="header-menu"]');
+        if (!headerMenu) return null;
+
+        // Create shared container - insert INSIDE header-menu after hamburger
         container = document.createElement('div');
         container.id = 'torn-pda-scripts-container';
         container.style.cssText = `
@@ -99,15 +103,11 @@
             align-items: center;
             gap: 6px;
             margin-left: 8px;
+            vertical-align: middle;
         `;
 
-        // Insert next to hamburger
-        const headerMenu = hamburger.closest('.header-menu, [class*="header-menu"]');
-        if (headerMenu) {
-            headerMenu.insertAdjacentElement('afterend', container);
-        } else {
-            hamburger.insertAdjacentElement('afterend', container);
-        }
+        // Insert after the hamburger button INSIDE the container
+        hamburger.insertAdjacentElement('afterend', container);
 
         return container;
     }

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Guard (PDA)
 // @namespace    torn-chain-guard
-// @version      1.6.2
+// @version      1.6.3
 // @description  Prevents accidental attacks when within range of a chain bonus threshold
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -873,16 +873,27 @@
         const hamburger = findHamburgerMenu();
         if (!hamburger) return null;
 
+        // Try to find the header-menu container to insert inside it
+        const headerMenu = hamburger.closest('.header-menu, [class*="header-menu"]');
+        if (!headerMenu) {
+            logDebug('Header menu container not found');
+            return null;
+        }
+
         container = document.createElement('div');
         container.id = 'torn-pda-scripts-container';
-        container.style.cssText = 'display:inline-flex;align-items:center;gap:6px;margin-left:8px;';
+        // Position inside the header-menu, after the hamburger button
+        container.style.cssText = `
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: 8px;
+            vertical-align: middle;
+        `;
 
-        const headerMenu = hamburger.closest('.header-menu, [class*="header-menu"]');
-        if (headerMenu) {
-            headerMenu.insertAdjacentElement('afterend', container);
-        } else {
-            hamburger.insertAdjacentElement('afterend', container);
-        }
+        // Insert after the hamburger button INSIDE the header-menu container
+        hamburger.insertAdjacentElement('afterend', container);
+        logDebug('Created shared container inside header-menu');
 
         return container;
     }
