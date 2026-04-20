@@ -12,25 +12,25 @@
 (function() {
     'use strict';
 
-    const HEADER_NAV_SELECTOR = '.header-navigation.right .toolbar';
+    const LEFT_MENU_SELECTOR = '.header-menu.left.leftMenu___md3Ch.dropdown-menu';
 
     function addSettingsDropdown() {
-        const toolbar = document.querySelector(HEADER_NAV_SELECTOR);
-        if (!toolbar) return false;
-        if (toolbar.querySelector('.torn-settings-wrapper')) return true;
+        const leftMenu = document.querySelector(LEFT_MENU_SELECTOR);
+        if (!leftMenu) return false;
+        if (leftMenu.querySelector('.torn-settings-wrapper')) return true;
 
-        // Create dropdown wrapper
-        const li = document.createElement('li');
-        li.className = 'torn-settings-wrapper';
-        li.style.cssText = 'display: inline-block; vertical-align: top; position: relative;';
+        // Create dropdown wrapper div (not li since we're not in a ul)
+        const wrapper = document.createElement('div');
+        wrapper.className = 'torn-settings-wrapper';
+        wrapper.style.cssText = 'display: inline-block; vertical-align: top; position: relative;';
 
         // Create button
         const button = document.createElement('button');
         button.type = 'button';
-        button.className = 'top_header_button button torn-settings-btn';
+        button.className = 'top_header_button header-menu-icon torn-settings-btn';
         button.setAttribute('aria-label', 'Settings');
         button.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="3"></circle>
                 <path d="M12 1v6m0 6v6m4.22-10.22l4.24-4.24M6.34 17.66l-4.24 4.24M23 12h-6m-6 0H1m20.24 4.24l-4.24-4.24M6.34 6.34L2.1 2.1"></path>
             </svg>
@@ -43,7 +43,7 @@
             display: none;
             position: absolute;
             top: 100%;
-            right: 0;
+            left: 0;
             background: #1a1a1a;
             border: 1px solid #333;
             border-radius: 4px;
@@ -101,11 +101,18 @@
             dropdown.style.display = 'none';
         });
 
-        li.appendChild(button);
-        li.appendChild(dropdown);
-        toolbar.appendChild(li);
+        wrapper.appendChild(button);
+        wrapper.appendChild(dropdown);
 
-        console.log('[Settings Dropdown] Added to header');
+        // Insert after the hamburger button
+        const hamburgerBtn = leftMenu.querySelector('button.header-menu-icon');
+        if (hamburgerBtn && hamburgerBtn.nextSibling) {
+            leftMenu.insertBefore(wrapper, hamburgerBtn.nextSibling);
+        } else {
+            leftMenu.appendChild(wrapper);
+        }
+
+        console.log('[Settings Dropdown] Added to left header menu');
         return true;
     }
 
