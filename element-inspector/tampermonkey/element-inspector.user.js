@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Torn Settings Dropdown
 // @namespace    torn-settings-dropdown
-// @version      1.0.0
-// @description  Adds a settings dropdown button to the header
+// @version      1.0.1
+// @description  Adds a settings dropdown button to the header (right of search)
 // @author       You
 // @match        https://www.torn.com/*
 // @grant        none
@@ -12,25 +12,29 @@
 (function() {
     'use strict';
 
-    const LEFT_MENU_SELECTOR = '.header-menu.left.leftMenu___md3Ch.dropdown-menu';
+    const TOOLBAR_SELECTOR = '.header-navigation.right .toolbar';
+    const SEARCH_SELECTOR = '.find-wrapper';
 
     function addSettingsDropdown() {
-        const leftMenu = document.querySelector(LEFT_MENU_SELECTOR);
-        if (!leftMenu) return false;
-        if (leftMenu.querySelector('.torn-settings-wrapper')) return true;
+        const toolbar = document.querySelector(TOOLBAR_SELECTOR);
+        if (!toolbar) return false;
+        if (toolbar.querySelector('.torn-settings-wrapper')) return true;
 
-        // Create dropdown wrapper div (not li since we're not in a ul)
-        const wrapper = document.createElement('div');
-        wrapper.className = 'torn-settings-wrapper';
-        wrapper.style.cssText = 'display: inline-block; vertical-align: top; position: relative;';
+        const searchLi = toolbar.querySelector(SEARCH_SELECTOR);
+        if (!searchLi) return false;
+
+        // Create li wrapper for the settings button
+        const li = document.createElement('li');
+        li.className = 'torn-settings-wrapper';
+        li.style.cssText = 'display: inline-block; vertical-align: top; position: relative;';
 
         // Create button
         const button = document.createElement('button');
         button.type = 'button';
-        button.className = 'top_header_button header-menu-icon torn-settings-btn';
+        button.className = 'top_header_button button torn-settings-btn';
         button.setAttribute('aria-label', 'Settings');
         button.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="3"></circle>
                 <path d="M12 1v6m0 6v6m4.22-10.22l4.24-4.24M6.34 17.66l-4.24 4.24M23 12h-6m-6 0H1m20.24 4.24l-4.24-4.24M6.34 6.34L2.1 2.1"></path>
             </svg>
@@ -43,7 +47,7 @@
             display: none;
             position: absolute;
             top: 100%;
-            left: 0;
+            right: 0;
             background: #1a1a1a;
             border: 1px solid #333;
             border-radius: 4px;
@@ -101,18 +105,17 @@
             dropdown.style.display = 'none';
         });
 
-        wrapper.appendChild(button);
-        wrapper.appendChild(dropdown);
+        li.appendChild(button);
+        li.appendChild(dropdown);
 
-        // Insert after the hamburger button
-        const hamburgerBtn = leftMenu.querySelector('button.header-menu-icon');
-        if (hamburgerBtn && hamburgerBtn.nextSibling) {
-            leftMenu.insertBefore(wrapper, hamburgerBtn.nextSibling);
+        // Insert AFTER the search button
+        if (searchLi.nextSibling) {
+            toolbar.insertBefore(li, searchLi.nextSibling);
         } else {
-            leftMenu.appendChild(wrapper);
+            toolbar.appendChild(li);
         }
 
-        console.log('[Settings Dropdown] Added to left header menu');
+        console.log('[Settings Dropdown] Added to toolbar (right of search)');
         return true;
     }
 
