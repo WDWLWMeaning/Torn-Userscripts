@@ -9,8 +9,17 @@
 // @run-at       document-start
 // ==/UserScript==
 
+// PDA Scripts Shared Settings Menu
+// This script can be included by any PDA userscript - only creates menu once
+
 (function() {
     'use strict';
+
+    // If menu already exists (created by another script), don't recreate
+    if (window.PDAScriptsMenu) {
+        console.log('[PDA Menu] Already initialized by another script');
+        return;
+    }
 
     const MENU_ID = 'pda-shared-settings-menu';
     const BUTTON_ID = 'pda-shared-settings-btn';
@@ -494,13 +503,37 @@
     };
 
     // Initialize button on load
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            window.PDAScriptsMenu._ensureButton();
-        });
-    } else {
+    function initMenu() {
+        if (window.PDAScriptsMenu._button) return; // Already initialized
         window.PDAScriptsMenu._ensureButton();
+        console.log('[PDA Menu] Shared settings menu initialized');
     }
 
-    console.log('[PDA Menu] Shared settings menu initialized');
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initMenu);
+    } else {
+        initMenu();
+    }
 })();
+
+// Global function for scripts to ensure menu exists
+// Scripts can call: ensurePDASharedMenu();
+window.ensurePDASharedMenu = function() {
+    if (window.PDAScriptsMenu) return Promise.resolve(window.PDAScriptsMenu);
+    
+    // Wait for menu to be created by another script
+    return new Promise((resolve) => {
+        let attempts = 0;
+        const checkInterval = setInterval(() => {
+            if (window.PDAScriptsMenu) {
+                clearInterval(checkInterval);
+                resolve(window.PDAScriptsMenu);
+            }
+            if (++attempts > 50) { // 5 second timeout
+                clearInterval(checkInterval);
+                console.error('[PDA Menu] Timeout waiting for shared menu');
+                resolve(null);
+            }
+        }, 100);
+    });
+};
