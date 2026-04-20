@@ -11,7 +11,7 @@
 
 ## Folder Structure
 
-Scripts are now organized by script name first, then by platform.
+Scripts are organized by script name first, then by platform.
 
 ```text
 torn-userscripts/
@@ -27,8 +27,12 @@ torn-userscripts/
 │   ├── tampermonkey/
 │   │   ├── mission-tracker.user.js
 │   │   └── mission-tracker.meta.js
+│   ├── pda/
+│   │   └── mission-tracker.js
 │   ├── assets/
 │   └── README.md
+├── shared/
+│   └── pda-settings-menu.js
 ├── examples.md
 ├── scripts/
 │   └── generate-meta.sh
@@ -94,23 +98,26 @@ Each Tampermonkey script has a corresponding `.meta.js` file containing only the
 
 ---
 
-### Mission Tracker `v3.2.1` (Tampermonkey only)
+### Mission Tracker `v5.1.1`
 
-Track your missions with native Torn styling.
+Track your missions with native Torn styling. Available for both Tampermonkey and Torn PDA.
 
 **Features:**
 - Badge on the **Missions** button showing incomplete mission count
 - **Red badge** = Mission expires in <24 hours (pulses for urgency)
 - **Yellow badge** = Mission expires in <48 hours
-- **Blue badge** = No urgency
-- Updates every 5 minutes with smart caching
+- Updates every minute with smart caching
 - Mobile and desktop responsive
 - Persists across page navigation
-- Settings panel with API key validation
 
-**Install:**
+**Tampermonkey Install:**
 ```text
 https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/mission-tracker/tampermonkey/mission-tracker.user.js
+```
+
+**Torn PDA Install:** Copy the script from:
+```text
+https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/mission-tracker/pda/mission-tracker.js
 ```
 
 See also: [mission-tracker/README.md](mission-tracker/README.md)

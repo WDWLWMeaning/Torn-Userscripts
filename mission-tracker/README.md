@@ -2,8 +2,9 @@
 
 > Track your TORN missions with native Torn styling and urgency indicators.
 
-[![Version](https://img.shields.io/badge/version-3.2.1-blue)](https://git.er-ic.ca/Kevin/torn-userscripts)
+[![Version](https://img.shields.io/badge/version-5.1.1-blue)](https://git.er-ic.ca/Kevin/torn-userscripts)
 [![Tampermonkey](https://img.shields.io/badge/Tampermonkey-Compatible-green)](https://www.tampermonkey.net/)
+[![Torn PDA](https://img.shields.io/badge/Torn%20PDA-Compatible-purple)](https://github.com/Manuito83/torn-pda)
 
 ## What It Does
 
@@ -33,7 +34,19 @@ Mission Tracker adds a visual badge to the **Missions** button in TORN, showing 
 3. Tampermonkey will prompt you to install — click "Install"
 4. Enter your TORN API key when prompted (required to fetch mission data)
 
-### Getting Your API Key
+### Torn PDA (Mobile)
+
+1. Open **Torn PDA → Settings → Advanced Browser Settings**
+2. Enable **"Custom User Scripts"**
+3. Tap **"Manage Scripts" → "+"**
+4. Paste the script from:
+   ```
+   https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/mission-tracker/pda/mission-tracker.js
+   ```
+5. Set **"Inject at"** to **End**
+6. The script will automatically use your PDA-connected API key
+
+### Getting Your API Key (Tampermonkey only)
 
 1. Go to [TORN Preferences → API Keys](https://www.torn.com/preferences.php#tab=api)
 2. Create a new key
@@ -69,8 +82,9 @@ Mission Tracker adds a visual badge to the **Missions** button in TORN, showing 
 - Check that your API key is still valid (keys can expire)
 
 **Not working on mobile?**
-- This script is designed for desktop browsers with Tampermonkey
-- For mobile, use Torn PDA's built-in mission tracking features
+- Use the Torn PDA version above
+- Make sure you've enabled "Custom User Scripts" in PDA settings
+- Set "Inject at" to "End" for proper DOM access
 
 ## Technical Details
 
@@ -84,6 +98,11 @@ Mission Tracker adds a visual badge to the **Missions** button in TORN, showing 
 - Automatic refresh on page load
 
 ## Changelog
+
+### v5.1.1
+- Added Torn PDA support with shared menu integration
+- API key auto-detected from PDA
+- Badge CSS matches Tampermonkey version exactly
 
 ### v3.2.1
 - Reorganized for script-first folder structure
@@ -107,4 +126,4 @@ Repo: https://git.er-ic.ca/Kevin/torn-userscripts
 
 ---
 
-**Note:** This script is for desktop browsers only. Torn PDA users should use PDA's built-in mission tracking features instead.
+**Note:** Both Tampermonkey and Torn PDA versions are supported. The PDA version uses your PDA-connected API key automatically.
