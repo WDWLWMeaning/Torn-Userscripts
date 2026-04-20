@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Mission Tracker (PDA)
 // @namespace    torn-mission-tracker
-// @version      4.0.11
+// @version      4.0.12
 // @description  Track Torn missions with alerts. Uses PDA-APIKEY placeholder for automatic API access.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -245,10 +245,12 @@
 
     function getApiKey() {
         // Debug: log what PDA_API_KEY actually is
-        log('PDA_API_KEY check:', typeof PDA_API_KEY, PDA_API_KEY === '###PDA-APIKEY###' ? 'NOT_REPLACED' : 'REPLACED', 'length:', PDA_API_KEY?.length);
+        const placeholder = '###PDA-APIKEY###';
+        const isPlaceholder = PDA_API_KEY === placeholder;
+        log('PDA_API_KEY value:', PDA_API_KEY, '| isPlaceholder:', isPlaceholder, '| length:', PDA_API_KEY?.length);
         
         // PDA replaces ###PDA-APIKEY### at runtime - check if it's been replaced
-        if (PDA_API_KEY && PDA_API_KEY !== '###PDA-APIKEY###' && PDA_API_KEY.length > 10) {
+        if (PDA_API_KEY && !isPlaceholder && PDA_API_KEY.length > 10) {
             log('Using PDA-provided API key');
             return PDA_API_KEY;
         }
@@ -474,7 +476,7 @@
 
     function init() {
         try {
-            log('v4.0.11 initializing...');
+            log('v4.0.12 initializing...');
             registerWithSharedMenu();
 
             // Initial refresh with error handling
