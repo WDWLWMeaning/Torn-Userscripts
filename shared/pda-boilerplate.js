@@ -1,520 +1,180 @@
 // ==UserScript==
-// @name         Torn PDA Script Boilerplate
-// @namespace    torn-pda-boilerplate
-// @version      1.1.0
-// @description  Self-contained boilerplate for Torn PDA userscripts with native API support
-// @author       Kevin
+// @name         Torn Script Boilerplate (PDA + Tampermonkey)
+// @namespace    torn-boilerplate
+// @version      1.0.0
+// @description  Starter template for Torn userscripts with shared PDA menu support
+// @author       Your Name
 // @match        https://www.torn.com/*
-// @run-at       document-start
 // ==/UserScript==
 
-/**
- * ╔══════════════════════════════════════════════════════════╗
- * ║  Torn PDA Script Boilerplate v1.1.0                      ║
- * ║  Self-contained with native PDA API support              ║
- * ╚══════════════════════════════════════════════════════════╝
- * 
- * TORN PDA NATIVE API:
- * - API Key: Use constant "###PDA-APIKEY###" (auto-replaced at runtime)
- * - HTTP: PDA_httpGet(url, headers) and PDA_httpPost(url, headers, body)
- * - GM Functions: GM_getValue, GM_setValue, GM_addStyle, etc. (via GMforPDA)
- * 
- * COOPERATIVE HEADER:
- * Scripts share header space by creating #torn-pda-scripts-container
- * next to the hamburger menu, each adding their own button.
- */
-
 (function() {
-    'use strict';
+    // PDA replaces this with the actual API key at runtime
+    let PDA_API_KEY = '###PDA-APIKEY###';
 
-    // ═══════════════════════════════════════════════════════════
-    // CONFIGURATION - Customize these for your script
-    // ═══════════════════════════════════════════════════════════
-    const SCRIPT_CONFIG = {
-        id: 'my-script-id',           // Unique ID (no spaces, kebab-case)
-        name: 'My Script Name',        // Display name
-        version: '1.0.0',              // Script version
-        icon: '🔧',                    // Icon for header button (emoji)
-        debug: false                   // Set to true for console logging
-    };
+    // Prevent duplicate script execution
+    if (window.__myScriptPDALoaded) return;
+    window.__myScriptPDALoaded = true;
 
+    // ============================================
+    // SHARED MENU INITIALIZER (copy this block to all PDA scripts)
+    // ============================================
+    if (!window.PDAScriptsMenu) {
+        const STYLES = { bg: '#2a2a2a', panel: '#333', text: '#ddd', textMuted: '#999', border: '#555', accent: '#82c91e' };
+        const POS_KEY = 'pda_shared_menu_position';
+        function sGet(k, d = '{}') { try { return localStorage.getItem(k) ?? d; } catch { return d; } }
+        function sSet(k, v) { try { localStorage.setItem(k, v); } catch {} }
+        function loadPos() { try { const p = JSON.parse(sGet(POS_KEY)); return { top: p.top ?? 100, left: p.left ?? 10 }; } catch { return { top: 100, left: 10 }; } }
+        function clamp(t, l, w = 44, h = 44) { const m = 5; return { top: Math.max(m, Math.min(t, window.innerHeight - h - m)), left: Math.max(m, Math.min(l, window.innerWidth - w - m)) }; }
+
+        window.PDAScriptsMenu = {
+            _scripts: new Map(), _button: null, _dropdown: null, _isDragging: false,
+            register(id, name, cfg) {
+                if (this._scripts.has(id)) return;
+                this._scripts.set(id, { id, name, config: cfg, values: this._load(id) });
+                this._updateUI();
+            },
+            getSetting(id, k, d) { const s = this._scripts.get(id); return s ? (s.values[k] ?? d) : d; },
+            setSetting(id, k, v) { const s = this._scripts.get(id); if (s) { s.values[k] = v; this._save(id, s.values); if (s.config.onChange) s.config.onChange(k, v); } },
+            _load(id) { try { return JSON.parse(sGet(`pda_script_${id}_settings`, '{}')); } catch { return {}; } },
+            _save(id, v) { sSet(`pda_script_${id}_settings`, JSON.stringify(v)); },
+            _ensureBtn() {
+                if (this._button) return this._button;
+                const b = document.createElement('button');
+                b.id = 'pda-shared-settings-btn';
+                b.innerHTML = '⚙️';
+                const p = clamp(...Object.values(loadPos()));
+                b.style.cssText = `position:fixed;top:${p.top}px;left:${p.left}px;z-index:99999;width:44px;height:44px;background:${STYLES.bg};border:2px solid ${STYLES.border};border-radius:8px;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,0.4);touch-action:none;user-select:none;`;
+                let dragStart = 0, sx, sy, st, sl;
+                const startDrag = (cx, cy) => { this._isDragging = true; sx = cx; sy = cy; st = parseInt(b.style.top); sl = parseInt(b.style.left); };
+                const moveDrag = (cx, cy) => { if (!this._isDragging) return; const c = clamp(st + cy - sy, sl + cx - sx); b.style.top = c.top + 'px'; b.style.left = c.left + 'px'; };
+                const endDrag = () => { if (!this._isDragging) return; this._isDragging = false; sSet(POS_KEY, JSON.stringify({ top: parseInt(b.style.top), left: parseInt(b.style.left) })); };
+                b.addEventListener('mousedown', e => { dragStart = Date.now(); const tm = setTimeout(() => startDrag(e.clientX, e.clientY), 300); const onMove = e => moveDrag(e.clientX, e.clientY); const onUp = () => { clearTimeout(tm); document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); endDrag(); }; document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onUp); });
+                b.addEventListener('touchstart', e => { dragStart = Date.now(); const t = e.touches[0]; const tm = setTimeout(() => startDrag(t.clientX, t.clientY), 300); const onMove = e => { const t = e.touches[0]; moveDrag(t.clientX, t.clientY); }; const onEnd = () => { clearTimeout(tm); document.removeEventListener('touchmove', onMove); document.removeEventListener('touchend', onEnd); endDrag(); }; document.addEventListener('touchmove', onMove, { passive: false }); document.addEventListener('touchend', onEnd); }, { passive: true });
+                b.addEventListener('click', e => { e.stopPropagation(); if (Date.now() - dragStart < 300 && !this._isDragging) this._toggle(); });
+                document.body.appendChild(b); this._button = b; return b;
+            },
+            _toggle() { if (this._dropdown) { this._dropdown.remove(); this._dropdown = null; } else this._show(); },
+            _show() {
+                const d = document.createElement('div');
+                d.style.cssText = `position:fixed;top:100px;left:10px;width:320px;max-height:400px;background:${STYLES.bg};border:1px solid ${STYLES.border};border-radius:8px;z-index:99998;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.5);color:${STYLES.text};font-family:Arial,sans-serif;`;
+                const h = document.createElement('div');
+                h.style.cssText = `padding:12px 16px;border-bottom:1px solid ${STYLES.border};font-weight:bold;font-size:14px;background:linear-gradient(180deg,#3a3a3a,${STYLES.bg});border-radius:8px 8px 0 0;`;
+                h.textContent = '🎮 PDA Scripts';
+                d.appendChild(h);
+                this._scripts.forEach(s => d.appendChild(this._createSection(s)));
+                const close = e => { if (!d.contains(e.target) && e.target !== this._button) { d.remove(); this._dropdown = null; document.removeEventListener('click', close); } };
+                setTimeout(() => document.addEventListener('click', close), 100);
+                document.body.appendChild(d); this._dropdown = d;
+            },
+            _createSection(s) {
+                const sec = document.createElement('div'); sec.style.cssText = 'border-bottom:1px solid ' + STYLES.border;
+                const h = document.createElement('div'); h.style.cssText = `padding:10px 16px;background:${STYLES.panel};font-weight:bold;font-size:13px;`; h.textContent = s.name; sec.appendChild(h);
+                const b = document.createElement('div'); b.style.cssText = 'padding:12px 16px;';
+                if (s.config.fields) s.config.fields.forEach(f => {
+                    const row = document.createElement('div'); row.style.cssText = 'margin-bottom:12px;';
+                    const lbl = document.createElement('label'); lbl.style.cssText = `display:block;color:${STYLES.textMuted};font-size:11px;margin-bottom:4px;text-transform:uppercase;`; lbl.textContent = f.label; row.appendChild(lbl);
+                    if (f.type === 'number') {
+                        const inp = document.createElement('input'); inp.type = 'number'; inp.value = this.getSetting(s.id, f.key, f.default); inp.style.cssText = `width:100%;padding:8px 12px;background:${STYLES.bg};border:1px solid ${STYLES.border};border-radius:4px;color:${STYLES.text};font-size:13px;box-sizing:border-box;`; inp.addEventListener('change', () => this.setSetting(s.id, f.key, parseFloat(inp.value))); row.appendChild(inp);
+                    } else if (f.type === 'toggle') {
+                        const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;align-items:center;gap:8px;';
+                        const inp = document.createElement('input'); inp.type = 'checkbox'; inp.checked = this.getSetting(s.id, f.key, f.default); inp.addEventListener('change', () => this.setSetting(s.id, f.key, inp.checked)); wrap.appendChild(inp);
+                        const span = document.createElement('span'); span.style.cssText = `color:${STYLES.text};font-size:13px;`; span.textContent = inp.checked ? 'On' : 'Off'; inp.addEventListener('change', () => span.textContent = inp.checked ? 'On' : 'Off'); wrap.appendChild(span);
+                        row.appendChild(wrap);
+                    }
+                    b.appendChild(row);
+                });
+                sec.appendChild(b); return sec;
+            },
+            _updateUI() { this._ensureBtn(); }
+        };
+    }
+
+    // ============================================
+    // YOUR SCRIPT CODE STARTS HERE
+    // ============================================
+    
     const CONFIG = {
-        POLL_INTERVAL_MS: 500,         // PDA-safe DOM polling interval
-        SETTINGS_KEY: 'my_script_settings',
-        API_KEY_PLACEHOLDER: '###PDA-APIKEY###'  // Auto-replaced by PDA
+        updateInterval: 60000,
+        mySetting: 10
     };
 
-    // ═══════════════════════════════════════════════════════════
-    // TORN NATIVE COLORS
-    // ═══════════════════════════════════════════════════════════
-    const TORN = {
-        bg: '#444',
-        panel: '#333',
-        panelHover: '#555',
-        text: '#ddd',
-        textMuted: '#999',
-        green: '#82c91e',
-        blue: '#74c0fc',
-        red: '#E54C19',
-        yellow: '#F08C00',
-        border: '#444',
-        borderLight: '#555',
-        headerGradient: 'linear-gradient(180deg, #777 0%, #333 100%)'
-    };
+    function log(...args) { console.log('[My Script]', ...args); }
 
-    // ═══════════════════════════════════════════════════════════
-    // DEBUG LOGGING
-    // ═══════════════════════════════════════════════════════════
-    function log(...args) {
-        if (SCRIPT_CONFIG.debug) {
-            console.log(`[${SCRIPT_CONFIG.name}]`, ...args);
-        }
-    }
-
-    function logError(...args) {
-        console.error(`[${SCRIPT_CONFIG.name}]`, ...args);
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // NATIVE PDA API HELPERS
-    // ═══════════════════════════════════════════════════════════
-
-    /**
-     * Get the user's API key (auto-replaced by Torn PDA at runtime)
-     * @returns {string} API key or placeholder if not in PDA
-     */
     function getApiKey() {
-        // ###PDA-APIKEY### is replaced by Torn PDA with the actual key
-        const key = CONFIG.API_KEY_PLACEHOLDER;
-        // If not replaced, return empty string
-        return key.includes('PDA-APIKEY') ? '' : key;
+        // Build placeholder dynamically so PDA doesn't replace it
+        const placeholder = '#' + '##PDA-APIKEY###';
+        if (PDA_API_KEY && PDA_API_KEY !== placeholder && PDA_API_KEY.length > 10) {
+            return PDA_API_KEY;  // Use PDA-provided key
+        }
+        // Fallback: get from shared menu settings
+        if (window.PDAScriptsMenu) {
+            return window.PDAScriptsMenu.getSetting('myScript', 'apiKey', '');
+        }
+        return '';
     }
 
-    /**
-     * Check if running inside Torn PDA
-     * @returns {boolean}
-     */
-    function isTornPDA() {
-        return typeof PDA_httpGet === 'function' || 
-               typeof window.flutter_inappwebview !== 'undefined' ||
-               getApiKey() !== '';
-    }
-
-    /**
-     * Make HTTP GET request using native PDA API if available
-     * Falls back to fetch() if not in PDA
-     */
-    async function httpGet(url, headers = {}) {
+    async function apiRequest(path) {
+        const key = getApiKey();
+        if (!key) throw new Error('No API key');
+        
+        const url = `https://api.torn.com/v2${path}?key=${encodeURIComponent(key)}`;
+        
+        // Use PDA's native HTTP function if available, otherwise fetch
         if (typeof PDA_httpGet === 'function') {
-            log('Using PDA_httpGet');
-            return PDA_httpGet(url, headers);
-        }
-        // Fallback to fetch
-        log('Using fetch fallback');
-        const response = await fetch(url, { headers });
-        return {
-            status: response.status,
-            statusText: response.statusText,
-            responseText: await response.text(),
-            responseHeaders: ''
-        };
-    }
-
-    /**
-     * Make HTTP POST request using native PDA API if available
-     */
-    async function httpPost(url, headers = {}, body = null) {
-        if (typeof PDA_httpPost === 'function') {
-            log('Using PDA_httpPost');
-            return PDA_httpPost(url, headers, body);
-        }
-        // Fallback to fetch
-        log('Using fetch fallback');
-        const response = await fetch(url, {
-            method: 'POST',
-            headers,
-            body: typeof body === 'object' ? JSON.stringify(body) : body
-        });
-        return {
-            status: response.status,
-            statusText: response.statusText,
-            responseText: await response.text(),
-            responseHeaders: ''
-        };
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // COOPERATIVE HEADER BUTTON
-    // ═══════════════════════════════════════════════════════════
-
-    /**
-     * Find the hamburger menu button in Torn's header
-     * Tries multiple selectors for different page states
-     */
-    function findHamburgerMenu() {
-        // Extended list of selectors for PDA/mobile/desktop
-        const selectors = [
-            '.header-menu.left .header-menu-icon',
-            '.header-menu-icon',
-            '.header-menu button',
-            '[class*="header-menu"] button',
-            '.top_header_button.header-menu-icon',
-            '#topHeaderBanner .header-menu button',
-            '.header-wrapper-top .header-menu button',
-            '.container .header-menu button',
-            'button[aria-label="Open menu"]',
-            'button.header-menu-icon'
-        ];
-
-        for (const sel of selectors) {
-            const el = document.querySelector(sel);
-            if (el && el.offsetParent !== null) {  // Check visible
-                log('Found hamburger menu:', sel);
-                return el;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Get or create the shared container for PDA script buttons
-     */
-    function getOrCreateSharedContainer() {
-        // Check if already exists
-        let container = document.getElementById('torn-pda-scripts-container');
-        if (container) {
-            log('Using existing shared container');
-            return container;
-        }
-
-        // Find hamburger menu
-        const hamburger = findHamburgerMenu();
-        if (!hamburger) {
-            log('Hamburger menu not found yet');
-            return null;
-        }
-
-        // Find the header-menu container
-        const headerMenu = hamburger.closest('.header-menu, [class*="header-menu"]');
-        if (!headerMenu) {
-            logError('Header menu container not found');
-            return null;
-        }
-
-        // Create shared container
-        container = document.createElement('div');
-        container.id = 'torn-pda-scripts-container';
-        container.style.cssText = `
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            margin-left: 8px;
-            vertical-align: middle;
-        `;
-
-        // Insert inside header-menu, after hamburger button
-        hamburger.insertAdjacentElement('afterend', container);
-        log('Created shared container');
-
-        return container;
-    }
-
-    /**
-     * Add this script's button to the shared header container
-     */
-    function addHeaderButton() {
-        const btnId = `pda-script-btn-${SCRIPT_CONFIG.id}`;
-        
-        // Check if already added
-        if (document.getElementById(btnId)) {
-            log('Button already exists');
-            return true;
-        }
-
-        const container = getOrCreateSharedContainer();
-        if (!container) {
-            return false;
-        }
-
-        // Create button
-        const btn = document.createElement('button');
-        btn.id = btnId;
-        btn.type = 'button';
-        btn.title = `${SCRIPT_CONFIG.name} settings`;
-        btn.setAttribute('aria-label', `${SCRIPT_CONFIG.name} settings`);
-        btn.textContent = SCRIPT_CONFIG.icon;
-        btn.style.cssText = `
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 32px;
-            height: 32px;
-            background: transparent;
-            border: 1px solid ${TORN.border};
-            border-radius: 4px;
-            color: ${TORN.text};
-            font-size: 16px;
-            cursor: pointer;
-            transition: all 0.2s;
-            padding: 0;
-            -webkit-tap-highlight-color: transparent;
-        `;
-
-        // Click handler
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            openSettings();
-        });
-
-        // Touch feedback for mobile
-        btn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            btn.style.background = TORN.panelHover;
-            btn.style.borderColor = TORN.green;
-        }, { passive: false });
-
-        btn.addEventListener('touchend', () => {
-            setTimeout(() => {
-                btn.style.background = 'transparent';
-                btn.style.borderColor = TORN.border;
-            }, 150);
-        });
-
-        container.appendChild(btn);
-        log('Added header button');
-        return true;
-    }
-
-    /**
-     * Start polling for header availability
-     * Keeps trying until button is added or timeout
-     */
-    function initHeaderButton(maxAttempts = 60) {  // 60 * 500ms = 30 seconds
-        let attempts = 0;
-
-        const tryAddButton = () => {
-            attempts++;
-            log(`Attempt ${attempts}/${maxAttempts} to add header button`);
-
-            if (addHeaderButton()) {
-                log('Header button added successfully');
-                return;
-            }
-
-            if (attempts < maxAttempts) {
-                setTimeout(tryAddButton, CONFIG.POLL_INTERVAL_MS);
-            } else {
-                logError('Failed to add header button after max attempts');
-            }
-        };
-
-        // Start trying
-        tryAddButton();
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // STORAGE (localStorage for PDA)
-    // ═══════════════════════════════════════════════════════════
-    function loadSettings() {
-        try {
-            const saved = localStorage.getItem(CONFIG.SETTINGS_KEY);
-            return saved ? JSON.parse(saved) : getDefaultSettings();
-        } catch (e) {
-            logError('Failed to load settings:', e);
-            return getDefaultSettings();
+            const resp = await PDA_httpGet(url);
+            const data = JSON.parse(resp.responseText);
+            if (data.error) throw new Error(data.error.error);
+            return data;
+        } else {
+            const resp = await fetch(url);
+            const data = await resp.json();
+            if (data.error) throw new Error(data.error.error);
+            return data;
         }
     }
 
-    function saveSettings(settings) {
-        try {
-            localStorage.setItem(CONFIG.SETTINGS_KEY, JSON.stringify(settings));
-            log('Settings saved');
-        } catch (e) {
-            logError('Failed to save settings:', e);
-        }
-    }
-
-    function getDefaultSettings() {
-        return {
-            enabled: true,
-            // Add your defaults here
-        };
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // SETTINGS UI
-    // ═══════════════════════════════════════════════════════════
-    function openSettings() {
-        const settings = loadSettings();
-        const modalId = `${SCRIPT_CONFIG.id}-settings`;
-
-        // Remove existing
-        const existing = document.getElementById(modalId);
-        if (existing) existing.remove();
-
-        const modal = document.createElement('div');
-        modal.id = modalId;
-        modal.style.cssText = `
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.85);
-            z-index: 999999;
-            display: flex;
-            align-items: flex-start;
-            justify-content: center;
-            padding-top: 60px;
-            font-family: Arial, sans-serif;
-        `;
-
-        modal.innerHTML = `
-            <div style="
-                background: ${TORN.panel};
-                border: 1px solid ${TORN.borderLight};
-                border-radius: 4px;
-                width: 90%;
-                max-width: 400px;
-                max-height: 80vh;
-                overflow-y: auto;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-            ">
-                <div style="
-                    background: ${TORN.headerGradient};
-                    padding: 12px 16px;
-                    border-bottom: 1px solid ${TORN.border};
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    position: sticky;
-                    top: 0;
-                ">
-                    <h3 style="
-                        margin: 0; color: #fff; font-size: 14px;
-                        font-weight: bold; text-shadow: 0 0 2px rgba(0,0,0,0.8);
-                    ">${SCRIPT_CONFIG.icon} ${SCRIPT_CONFIG.name}</h3>
-                    <button id="${SCRIPT_CONFIG.id}-close" style="
-                        background: transparent; border: none;
-                        color: ${TORN.textMuted}; font-size: 20px;
-                        cursor: pointer; padding: 0 4px;
-                    ">×</button>
-                </div>
-                <div style="padding: 16px;">
-                    <div style="margin-bottom: 16px;">
-                        <label style="
-                            display: block; color: ${TORN.textMuted};
-                            font-size: 12px; font-weight: bold;
-                            margin-bottom: 6px;
-                        ">Enable Feature</label>
-                        <label style="color: ${TORN.text}; cursor: pointer;">
-                            <input type="checkbox" id="${SCRIPT_CONFIG.id}-enabled" 
-                                ${settings.enabled ? 'checked' : ''}
-                                style="margin-right: 8px;">
-                            Enabled
-                        </label>
-                    </div>
-                    
-                    <div style="
-                        margin-top: 20px;
-                        padding-top: 16px;
-                        border-top: 1px solid ${TORN.border};
-                    ">
-                        <button id="${SCRIPT_CONFIG.id}-save" style="
-                            width: 100%;
-                            padding: 12px;
-                            background: ${TORN.panelHover};
-                            border: 1px solid ${TORN.borderLight};
-                            color: ${TORN.text};
-                            border-radius: 4px;
-                            cursor: pointer;
-                            font-weight: bold;
-                            font-size: 14px;
-                        ">Save Settings</button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        // Handlers
-        const closeModal = () => modal.remove();
-        modal.querySelector(`#${SCRIPT_CONFIG.id}-close`).addEventListener('click', closeModal);
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) closeModal();
-        });
-        
-        modal.querySelector(`#${SCRIPT_CONFIG.id}-save`).addEventListener('click', () => {
-            settings.enabled = modal.querySelector(`#${SCRIPT_CONFIG.id}-enabled`).checked;
-            saveSettings(settings);
-            closeModal();
-        });
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // DOM POLLING HELPER (PDA-safe)
-    // ═══════════════════════════════════════════════════════════
-    function pollForElement(selector, callback, maxAttempts = 60) {
-        let attempts = 0;
-
-        const check = () => {
-            attempts++;
-            const el = document.querySelector(selector);
-            
-            if (el) {
-                log('Found element:', selector);
-                callback(el);
-                return;
-            }
-            
-            if (attempts < maxAttempts) {
-                setTimeout(check, CONFIG.POLL_INTERVAL_MS);
-            } else {
-                log('Timeout waiting for:', selector);
-            }
-        };
-
-        check();
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // YOUR SCRIPT LOGIC HERE
-    // ═══════════════════════════════════════════════════════════
-    async function initScript() {
-        const settings = loadSettings();
-        if (!settings.enabled) {
-            log('Script disabled in settings');
+    function registerWithSharedMenu() {
+        if (!window.PDAScriptsMenu) {
+            setTimeout(registerWithSharedMenu, 500);
             return;
         }
-
-        log('v' + SCRIPT_CONFIG.version + ' running');
-        log('Torn PDA detected:', isTornPDA());
-        log('API Key available:', getApiKey() ? 'Yes' : 'No');
-
-        // Example: Poll for an element and modify it
-        // pollForElement('.some-selector', (el) => {
-        //     el.style.border = '2px solid ' + TORN.green;
-        // });
-
-        // Example: Make API request
-        // try {
-        //     const data = await httpGet('https://api.torn.com/v2/user/basic?key=' + getApiKey());
-        //     log('API response:', data);
-        // } catch (e) {
-        //     logError('API error:', e);
-        // }
+        window.PDAScriptsMenu.register('myScript', '📋 My Script', {
+            fields: [
+                { 
+                    key: 'mySetting', 
+                    label: 'My Setting', 
+                    type: 'number', 
+                    default: 10 
+                },
+                { 
+                    key: 'enabled', 
+                    label: 'Enabled', 
+                    type: 'toggle', 
+                    default: true 
+                }
+            ],
+            onChange: (key, value) => {
+                log('Setting changed:', key, value);
+                // Update your CONFIG or re-run logic here
+                CONFIG.mySetting = window.PDAScriptsMenu.getSetting('myScript', 'mySetting', 10);
+            }
+        });
+        log('✓ Registered with shared menu');
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // INIT
-    // ═══════════════════════════════════════════════════════════
-    function init() {
+    async function init() {
         log('Initializing...');
-        
-        // Start header button polling
-        initHeaderButton();
-        
-        // Run main script logic
-        initScript();
+        registerWithSharedMenu();
+
+        // Example: fetch data
+        try {
+            if (getApiKey()) {
+                const data = await apiRequest('/user');
+                log('API data:', data);
+            }
+        } catch (err) {
+            log('API error:', err.message);
+        }
     }
 
     if (document.readyState === 'loading') {

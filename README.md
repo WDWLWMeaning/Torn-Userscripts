@@ -32,11 +32,12 @@ torn-userscripts/
 │   ├── assets/
 │   └── README.md
 ├── shared/
-│   └── pda-settings-menu.js
+│   ├── pda-settings-menu.js
+│   └── pda-boilerplate.js
 ├── examples.md
 ├── scripts/
 │   └── generate-meta.sh
-└── userscript.js
+└── boilerplate.js (legacy, use shared/pda-boilerplate.js)
 ```
 
 ---
@@ -136,7 +137,7 @@ A starter template for building your own Torn extensions with PDA + Tampermonkey
 - Smart caching helpers
 - Torn API v2 request helper
 
-**Get started:** Copy [`boilerplate.js`](boilerplate.js) and customize the `// YOUR SCRIPT CODE STARTS HERE` section.
+**Get started:** Copy [`shared/pda-boilerplate.js`](shared/pda-boilerplate.js) and customize the `// YOUR SCRIPT CODE STARTS HERE` section.
 
 ---
 
