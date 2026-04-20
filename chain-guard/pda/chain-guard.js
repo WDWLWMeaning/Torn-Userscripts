@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Guard (PDA)
 // @namespace    torn-chain-guard
-// @version      1.6.1
+// @version      1.6.2
 // @description  Prevents accidental attacks when within range of a chain bonus threshold
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -844,16 +844,25 @@
     // Each script adds its own button to a shared container - no dependencies
 
     function findHamburgerMenu() {
+        // Try multiple selectors for different page states (desktop, mobile, PDA)
         const selectors = [
-            '.header-menu.left .header-menu-icon',
-            '.header-menu-icon',
-            '[class*="header-menu"] button',
-            '.top_header_button.header-menu-icon'
+            '.header-menu.left .header-menu-icon',           // Desktop with left menu
+            '.header-menu-icon',                              // Generic
+            '[class*="header-menu"] button',                // Class-based
+            '.top_header_button.header-menu-icon',           // Torn native class
+            '.header-navigation .header-buttons-wrapper',    // Alternative header structure
+            '.header-wrapper-top .header-menu',              // Top header area
+            '#topHeaderBanner .header-menu',                 // Within header banner
+            '.container .header-menu'                        // Within container
         ];
         for (const sel of selectors) {
             const el = document.querySelector(sel);
-            if (el) return el;
+            if (el) {
+                logDebug('Found hamburger menu with selector:', sel);
+                return el;
+            }
         }
+        logDebug('Hamburger menu not found yet');
         return null;
     }
 
@@ -1003,11 +1012,35 @@
         };
     }
 
+    // Poll for header button availability (separate from chain polling)
+    let headerButtonPollInterval = null;
+    function startHeaderButtonPolling() {
+        if (headerButtonPollInterval) return;
+        
+        headerButtonPollInterval = setInterval(() => {
+            if (ensureHeaderButton()) {
+                // Success! Stop polling
+                clearInterval(headerButtonPollInterval);
+                headerButtonPollInterval = null;
+                log('Header button attached successfully');
+            }
+        }, 500);
+        
+        // Stop after 30 seconds to avoid infinite polling
+        setTimeout(() => {
+            if (headerButtonPollInterval) {
+                clearInterval(headerButtonPollInterval);
+                headerButtonPollInterval = null;
+                logDebug('Header button polling timeout - header may not be present on this page');
+            }
+        }, 30000);
+    }
+
     function init() {
         log('Init start');
         ensureStyles();
         loadChainCache();
-        ensureHeaderButton();
+        startHeaderButtonPolling();  // Start dedicated polling for button
         ensurePolling();
         parseChainFromDOM(true);
         updateGuard();
