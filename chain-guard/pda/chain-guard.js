@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Guard (PDA)
 // @namespace    torn-chain-guard
-// @version      1.6.3
+// @version      1.6.4
 // @description  Prevents accidental attacks when within range of a chain bonus threshold
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -49,12 +49,10 @@
         red: '#E54C19',
         yellow: '#F08C00',
         green: '#82c91e',
+        blue: '#74c0fc',
         border: '#444',
         borderLight: '#555',
         headerGradient: 'linear-gradient(180deg, #777 0%, #333 100%)'
-        green: '#82c91e',
-        blue: '#74c0fc',
-        border: '#555'
     };
 
     let chainState = {
@@ -846,23 +844,36 @@
     function findHamburgerMenu() {
         // Try multiple selectors for different page states (desktop, mobile, PDA)
         const selectors = [
-            '.header-menu.left .header-menu-icon',           // Desktop with left menu
-            '.header-menu-icon',                              // Generic
-            '[class*="header-menu"] button',                // Class-based
-            '.top_header_button.header-menu-icon',           // Torn native class
-            '.header-navigation .header-buttons-wrapper',    // Alternative header structure
-            '.header-wrapper-top .header-menu',              // Top header area
-            '#topHeaderBanner .header-menu',                 // Within header banner
-            '.container .header-menu'                        // Within container
+            '.header-menu.left .header-menu-icon',
+            '.header-menu-icon',
+            '.header-menu button',
+            '[class*="header-menu"] button',
+            '.top_header_button.header-menu-icon',
+            '#topHeaderBanner .header-menu button',
+            '.header-wrapper-top .header-menu button',
+            '.container .header-menu button',
+            'button[aria-label="Open menu"]',
+            'button.header-menu-icon'
         ];
+        
         for (const sel of selectors) {
             const el = document.querySelector(sel);
-            if (el) {
-                logDebug('Found hamburger menu with selector:', sel);
+            if (el && el.offsetParent !== null) {  // Check visible
+                log('Found hamburger menu:', sel);
                 return el;
             }
         }
-        logDebug('Hamburger menu not found yet');
+        
+        // Debug: log what we DID find
+        const headerButtons = document.querySelectorAll('.top_header_button, .header-menu-icon, button[aria-label]');
+        if (headerButtons.length > 0) {
+            logDebug('Available header buttons:', Array.from(headerButtons).map(b => ({
+                class: b.className,
+                ariaLabel: b.getAttribute('aria-label'),
+                text: b.textContent?.substring(0, 20)
+            })));
+        }
+        
         return null;
     }
 
@@ -900,41 +911,78 @@
 
     function ensureHeaderButton() {
         const btnId = 'pda-script-btn-chain-guard';
-        if (document.getElementById(btnId)) return true;
+        
+        // Check if already exists
+        const existing = document.getElementById(btnId);
+        if (existing) {
+            logDebug('Button already exists');
+            return true;
+        }
 
+        // Try to get/create container
         const container = getOrCreateSharedContainer();
-        if (!container) return false;
+        if (!container) {
+            logDebug('Container not available yet');
+            return false;
+        }
 
-        const btn = document.createElement('button');
-        btn.id = btnId;
-        btn.type = 'button';
-        btn.title = 'Chain Guard settings';
-        btn.setAttribute('aria-label', 'Chain Guard settings');
-        btn.textContent = '🛡️';
-        btn.style.cssText = `
-            display:flex;align-items:center;justify-content:center;
-            width:32px;height:32px;background:transparent;
-            border:1px solid ${TORN.border};border-radius:4px;
-            color:${TORN.text};font-size:16px;cursor:pointer;
-            transition:all 0.2s;padding:0;
-        `;
-        btn.addEventListener('click', openSettings);
+        try {
+            const btn = document.createElement('button');
+            btn.id = btnId;
+            btn.type = 'button';
+            btn.title = 'Chain Guard settings';
+            btn.setAttribute('aria-label', 'Chain Guard settings');
+            btn.textContent = '🛡️';
+            btn.style.cssText = `
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 32px;
+                height: 32px;
+                background: transparent;
+                border: 1px solid ${TORN.border};
+                border-radius: 4px;
+                color: ${TORN.text};
+                font-size: 16px;
+                cursor: pointer;
+                transition: all 0.2s;
+                padding: 0;
+                -webkit-tap-highlight-color: transparent;
+            `;
 
-        // Touch feedback
-        btn.addEventListener('touchstart', () => {
-            btn.style.background = TORN.panelHover;
-            btn.style.borderColor = TORN.green;
-        });
-        btn.addEventListener('touchend', () => {
-            setTimeout(() => {
-                btn.style.background = 'transparent';
-                btn.style.borderColor = TORN.border;
-            }, 200);
-        });
+            // Click handler with error catching
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                try {
+                    openSettings();
+                } catch (err) {
+                    logError('Error opening settings:', err);
+                    alert('Chain Guard: Error opening settings. Check console.');
+                }
+            });
 
-        container.appendChild(btn);
-        log('Added header button');
-        return true;
+            // Touch feedback
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                btn.style.background = TORN.panelHover;
+                btn.style.borderColor = TORN.green;
+            }, { passive: false });
+
+            btn.addEventListener('touchend', () => {
+                setTimeout(() => {
+                    btn.style.background = 'transparent';
+                    btn.style.borderColor = TORN.border;
+                }, 150);
+            });
+
+            container.appendChild(btn);
+            log('✓ Header button added successfully');
+            return true;
+        } catch (err) {
+            logError('Failed to create button:', err);
+            return false;
+        }
     }
 
     function updateGuard() {
@@ -1048,16 +1096,18 @@
     }
 
     function init() {
-        log('Init start');
+        log('═══════════════════════════════════════');
+        log('Chain Guard PDA v1.6.4 initializing...');
+        log('URL:', window.location.href);
+        
         ensureStyles();
         loadChainCache();
-        startHeaderButtonPolling();  // Start dedicated polling for button
+        startHeaderButtonPolling();
         ensurePolling();
         parseChainFromDOM(true);
         updateGuard();
 
-        log('Ready. Current chain:', chainState.amount, '/', chainState.max, 'source:', chainState.source);
-        logDebug('Ready state', { url: window.location.href, chain: `${chainState.amount}/${chainState.max}`, source: chainState.source });
+        log('Ready. Chain:', chainState.amount, '/', chainState.max);
     }
 
     if (document.readyState === 'loading') {
