@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Mission Tracker
 // @namespace    torn-mission-tracker
-// @version      3.2.2
+// @version      3.2.3
 // @description  Track Torn missions with native Torn styling. Red alert for <24h, yellow for <48h.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -19,8 +19,8 @@
 
 /**
  * ╔══════════════════════════════════════════════════════════╗
- * ║  Torn Mission Tracker v3.2.1                             ║
- * ║  Native Torn styling that blends with the site           ║
+ * ║  Torn Mission Tracker v3.2.3                            ║
+ * ║  Native Torn styling that blends with the site          ║
  * ╚══════════════════════════════════════════════════════════╝
  */
 
@@ -540,7 +540,7 @@
                     width: 420px;
                     max-width: 90%;
                 ">
-                    <h3 style="margin-top: 0;">⚙️ Mission Tracker — v3.2.0</h3>
+                    <h3 style="margin-top: 0;">⚙️ Mission Tracker — v3.2.3</h3>
 
                     <label style="display: block; margin: 15px 0 5px;">
                         API Key
@@ -651,7 +651,7 @@
 
         setupMutationObserver();
 
-        console.log('[Mission Tracker] Mission Tracker initialized. Running v3.2.0');
+        console.log('[Mission Tracker] Mission Tracker initialized. Running v3.2.3');
     }
 
     GM_registerMenuCommand('Settings', showSettings);
