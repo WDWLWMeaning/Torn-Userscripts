@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Guard (PDA)
 // @namespace    torn-chain-guard
-// @version      1.6.4
+// @version      1.6.5
 // @description  Prevents accidental attacks when within range of a chain bonus threshold
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -838,76 +838,8 @@
         }
     }
 
-    // ==================== COOPERATIVE HEADER BUTTON ====================
-    // Each script adds its own button to a shared container - no dependencies
-
-    function findHamburgerMenu() {
-        // Try multiple selectors for different page states (desktop, mobile, PDA)
-        const selectors = [
-            '.header-menu.left .header-menu-icon',
-            '.header-menu-icon',
-            '.header-menu button',
-            '[class*="header-menu"] button',
-            '.top_header_button.header-menu-icon',
-            '#topHeaderBanner .header-menu button',
-            '.header-wrapper-top .header-menu button',
-            '.container .header-menu button',
-            'button[aria-label="Open menu"]',
-            'button.header-menu-icon'
-        ];
-        
-        for (const sel of selectors) {
-            const el = document.querySelector(sel);
-            if (el && el.offsetParent !== null) {  // Check visible
-                log('Found hamburger menu:', sel);
-                return el;
-            }
-        }
-        
-        // Debug: log what we DID find
-        const headerButtons = document.querySelectorAll('.top_header_button, .header-menu-icon, button[aria-label]');
-        if (headerButtons.length > 0) {
-            logDebug('Available header buttons:', Array.from(headerButtons).map(b => ({
-                class: b.className,
-                ariaLabel: b.getAttribute('aria-label'),
-                text: b.textContent?.substring(0, 20)
-            })));
-        }
-        
-        return null;
-    }
-
-    function getOrCreateSharedContainer() {
-        let container = document.getElementById('torn-pda-scripts-container');
-        if (container) return container;
-
-        const hamburger = findHamburgerMenu();
-        if (!hamburger) return null;
-
-        // Try to find the header-menu container to insert inside it
-        const headerMenu = hamburger.closest('.header-menu, [class*="header-menu"]');
-        if (!headerMenu) {
-            logDebug('Header menu container not found');
-            return null;
-        }
-
-        container = document.createElement('div');
-        container.id = 'torn-pda-scripts-container';
-        // Position inside the header-menu, after the hamburger button
-        container.style.cssText = `
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            margin-left: 8px;
-            vertical-align: middle;
-        `;
-
-        // Insert after the hamburger button INSIDE the header-menu container
-        hamburger.insertAdjacentElement('afterend', container);
-        logDebug('Created shared container inside header-menu');
-
-        return container;
-    }
+    // ==================== LEFT SIDEBAR BUTTON ====================
+    // Static button fixed to the left side of the viewport
 
     function ensureHeaderButton() {
         const btnId = 'pda-script-btn-chain-guard';
@@ -919,13 +851,6 @@
             return true;
         }
 
-        // Try to get/create container
-        const container = getOrCreateSharedContainer();
-        if (!container) {
-            logDebug('Container not available yet');
-            return false;
-        }
-
         try {
             const btn = document.createElement('button');
             btn.id = btnId;
@@ -933,20 +858,26 @@
             btn.title = 'Chain Guard settings';
             btn.setAttribute('aria-label', 'Chain Guard settings');
             btn.textContent = '🛡️';
+            // Fixed position on the left side of the viewport
             btn.style.cssText = `
+                position: fixed;
+                top: 100px;
+                left: 10px;
+                z-index: 9999;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                width: 32px;
-                height: 32px;
-                background: transparent;
+                width: 40px;
+                height: 40px;
+                background: ${TORN.bg};
                 border: 1px solid ${TORN.border};
                 border-radius: 4px;
                 color: ${TORN.text};
-                font-size: 16px;
+                font-size: 20px;
                 cursor: pointer;
                 transition: all 0.2s;
                 padding: 0;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
                 -webkit-tap-highlight-color: transparent;
             `;
 
@@ -962,22 +893,32 @@
                 }
             });
 
-            // Touch feedback
-            btn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
+            // Hover effects
+            btn.addEventListener('mouseenter', () => {
                 btn.style.background = TORN.panelHover;
                 btn.style.borderColor = TORN.green;
-            }, { passive: false });
+            });
+
+            btn.addEventListener('mouseleave', () => {
+                btn.style.background = TORN.bg;
+                btn.style.borderColor = TORN.border;
+            });
+
+            // Touch feedback
+            btn.addEventListener('touchstart', (e) => {
+                btn.style.background = TORN.panelHover;
+                btn.style.borderColor = TORN.green;
+            }, { passive: true });
 
             btn.addEventListener('touchend', () => {
                 setTimeout(() => {
-                    btn.style.background = 'transparent';
+                    btn.style.background = TORN.bg;
                     btn.style.borderColor = TORN.border;
                 }, 150);
             });
 
-            container.appendChild(btn);
-            log('✓ Header button added successfully');
+            document.body.appendChild(btn);
+            log('✓ Left sidebar button added successfully');
             return true;
         } catch (err) {
             logError('Failed to create button:', err);
@@ -1097,7 +1038,7 @@
 
     function init() {
         log('═══════════════════════════════════════');
-        log('Chain Guard PDA v1.6.4 initializing...');
+        log('Chain Guard PDA v1.6.5 initializing...');
         log('URL:', window.location.href);
         
         ensureStyles();
