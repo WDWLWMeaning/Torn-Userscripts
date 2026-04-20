@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Mission Tracker
 // @namespace    torn-mission-tracker
-// @version      3.2.3
+// @version      3.2.4
 // @description  Track Torn missions with native Torn styling. Red alert for <24h, yellow for <48h.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -19,7 +19,7 @@
 
 /**
  * ╔══════════════════════════════════════════════════════════╗
- * ║  Torn Mission Tracker v3.2.3                            ║
+ * ║  Torn Mission Tracker v3.2.4                            ║
  * ║  Native Torn styling that blends with the site          ║
  * ╚══════════════════════════════════════════════════════════╝
  */
@@ -253,139 +253,173 @@
             /* ═══════════════════════════════════════════════════════════ */
             /* SETTINGS MODAL - Native Torn Panels                          */
             /* ═══════════════════════════════════════════════════════════ */
-            
+
             #mission-tracker-settings {
                 font-family: Arial, sans-serif;
             }
-            
-            #mission-modal-overlay {
-                background: rgba(25, 25, 25, 0.95) !important;
+
+            #mission-tracker-settings .mt-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: rgba(0, 0, 0, 0.85);
             }
-            
-            #mission-tracker-settings > div > div {
-                background: ${TORN.panel} !important;
-                border: 1px solid ${TORN.borderLight} !important;
-                border-radius: 4px !important;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
+
+            #mission-tracker-settings .mt-panel {
+                width: 420px;
+                max-width: 90%;
+                background: ${TORN.panel};
+                border: 1px solid ${TORN.borderLight};
+                border-radius: 4px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+                color: ${TORN.text};
+                overflow: hidden;
             }
-            
-            /* Torn-style title bar */
-            #mission-tracker-settings h3 {
-                background: ${TORN.titleGradient} !important;
-                color: #fff !important;
-                font-family: Arial, sans-serif !important;
+
+            #mission-tracker-settings .mt-header {
+                background: ${TORN.headerGradient};
+                color: #fff;
                 font-size: 14px;
                 font-weight: bold;
-                text-shadow: 0 0 2px rgba(0,0,0,0.8);
-                padding: 10px 15px !important;
-                margin: -25px -25px 15px -25px !important;
+                text-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
+                padding: 12px 16px;
                 border-bottom: 1px solid ${TORN.borderDark};
-                border-radius: 4px 4px 0 0;
             }
-            
-            #mission-tracker-settings label {
-                color: ${TORN.textMuted} !important;
+
+            #mission-tracker-settings .mt-body {
+                padding: 16px;
+            }
+
+            #mission-tracker-settings .mt-field {
+                margin-bottom: 16px;
+            }
+
+            #mission-tracker-settings .mt-field label {
+                display: block;
+                margin-bottom: 6px;
+                color: ${TORN.textMuted};
                 font-size: 12px;
                 font-weight: bold;
             }
-            
-            /* Torn-style input */
-            #api-key-input {
-                background: linear-gradient(0deg, #111 0%, #000 100%) !important;
-                border: 1px solid ${TORN.borderLight} !important;
-                color: #fff !important;
-                font-family: 'Courier New', monospace !important;
-                border-radius: 3px !important;
-                padding: 8px !important;
+
+            #mission-tracker-settings .mt-input {
+                width: 100%;
+                padding: 8px 12px;
+                box-sizing: border-box;
+                background: linear-gradient(0deg, #111 0%, #000 100%);
+                border: 1px solid ${TORN.borderLight};
+                color: #fff;
+                font-family: 'Courier New', monospace;
+                border-radius: 3px;
             }
-            
-            #api-key-input:focus {
-                border-color: ${TORN.blue} !important;
-                box-shadow: 0 0 2px rgba(116, 192, 252, 0.6) !important;
-                outline: none !important;
+
+            #mission-tracker-settings .mt-input:focus {
+                border-color: ${TORN.blue};
+                box-shadow: 0 0 2px rgba(116, 192, 252, 0.6);
+                outline: none;
             }
-            
-            /* Info Panels - Torn panels */
-            #mission-tracker-settings [style*="background: #1a1410"] {
-                background: ${TORN.panel} !important;
-                border: 1px solid ${TORN.borderLight} !important;
-                border-radius: 3px !important;
+
+            #mission-tracker-settings .mt-card {
+                background: ${TORN.panel};
+                border: 1px solid ${TORN.borderLight};
+                border-radius: 3px;
+                padding: 12px;
+                margin: 12px 0;
+                font-size: 12px;
             }
-            
-            #mission-tracker-settings [style*="color: #b87333"] {
-                color: ${TORN.textMuted} !important;
+
+            #mission-tracker-settings .mt-card-title {
+                margin-bottom: 8px;
+                color: ${TORN.textMuted};
+                font-weight: bold;
+                font-size: 12px;
             }
-            
-            #mission-tracker-settings [style*="color: #e8dcc4"] {
-                color: ${TORN.text} !important;
+
+            #mission-tracker-settings .mt-row {
+                margin-bottom: 5px;
+                color: ${TORN.text};
             }
-            
-            #mission-tracker-settings [style*="color: #daa520"] {
-                color: ${TORN.green} !important;
+
+            #mission-tracker-settings .mt-muted {
+                color: ${TORN.textMuted};
             }
-            
-            /* Links - Torn blue */
-            #mission-tracker-settings a[href*="torn.com"] {
-                color: ${TORN.blue} !important;
-                text-decoration: none !important;
+
+            #mission-tracker-settings .mt-good {
+                color: ${TORN.green};
+                font-weight: bold;
             }
-            
-            #mission-tracker-settings a[href*="torn.com"]:hover {
-                color: #a5d8ff !important;
-                text-decoration: underline !important;
+
+            #mission-tracker-settings .mt-error {
+                color: ${TORN.red};
+                font-weight: bold;
             }
-            
-            /* Buttons - Torn native */
-            #save-mission-settings {
-                background: linear-gradient(180deg, #111 0%, #555 25%, #333 60%, #333 78%, #111 100%) !important;
-                border: 1px solid #111 !important;
-                color: #eee !important;
-                border-radius: 3px !important;
-                font-family: Arial, sans-serif !important;
-                font-weight: bold !important;
-                text-shadow: 0 0 5px #000 !important;
-                box-shadow: none !important;
+
+            #mission-tracker-settings .mt-selections {
+                margin-top: 10px;
+                font-size: 11px;
+                color: ${TORN.textMuted};
             }
-            
-            #save-mission-settings:hover {
-                background: linear-gradient(180deg, #333 0%, #777 25%, #555 59%, #666 78%, #333 100%) !important;
-                color: #fff !important;
-                text-shadow: 0 0 5px rgba(255,255,255,0.25) !important;
+
+            #mission-tracker-settings .mt-actions {
+                margin-top: 20px;
+                display: flex;
+                gap: 10px;
             }
-            
-            #cancel-mission-settings {
-                background: linear-gradient(180deg, #111 0%, #555 25%, #333 60%, #333 78%, #111 100%) !important;
-                border: 1px solid #111 !important;
-                color: #eee !important;
-                border-radius: 3px !important;
-                font-family: Arial, sans-serif !important;
-                font-weight: bold !important;
-                text-shadow: 0 0 5px #000 !important;
+
+            #mission-tracker-settings .mt-actions button,
+            #mission-tracker-settings .mt-link-button {
+                flex: 1;
+                display: inline-block;
+                padding: 10px 12px;
+                background: linear-gradient(180deg, #111 0%, #555 25%, #333 60%, #333 78%, #111 100%);
+                border: 1px solid #111;
+                color: #eee;
+                text-decoration: none;
+                border-radius: 3px;
+                font-family: Arial, sans-serif;
+                font-weight: bold;
+                font-size: 13px;
+                text-align: center;
+                text-shadow: 0 0 5px #000;
+                cursor: pointer;
+                box-sizing: border-box;
             }
-            
-            #cancel-mission-settings:hover {
-                background: linear-gradient(180deg, #333 0%, #777 25%, #555 59%, #666 78%, #333 100%) !important;
-                color: #fff !important;
+
+            #mission-tracker-settings .mt-actions button:hover,
+            #mission-tracker-settings .mt-link-button:hover {
+                background: linear-gradient(180deg, #333 0%, #777 25%, #555 59%, #666 78%, #333 100%);
+                color: #fff;
             }
-            
-            /* Code Tags */
+
+            #mission-tracker-settings .mt-primary {
+                border-color: ${TORN.green};
+            }
+
+            #mission-tracker-settings .mt-link-button {
+                margin-top: 10px;
+            }
+
             #mission-tracker-settings code {
-                background: ${TORN.bg} !important;
-                border: 1px solid ${TORN.borderLight} !important;
-                color: ${TORN.green} !important;
-                font-family: 'Courier New', monospace !important;
-                border-radius: 2px !important;
-                padding: 2px 5px !important;
+                background: ${TORN.bg};
+                border: 1px solid ${TORN.borderLight};
+                color: ${TORN.green};
+                font-family: 'Courier New', monospace;
+                border-radius: 2px;
+                padding: 2px 5px;
             }
-            
-            /* Error Messages - Torn Red */
-            #mission-tracker-settings [style*="color: #8b4513"] {
-                color: ${TORN.red} !important;
-            }
-            
-            /* Success/Green text */
-            #mission-tracker-settings span[style*="color: #b8860b"] {
-                color: ${TORN.green} !important;
+
+            #mission-tracker-settings .mt-footer-note {
+                margin-top: 15px;
+                padding-top: 15px;
+                border-top: 1px solid ${TORN.border};
+                font-size: 10px;
+                color: ${TORN.textMuted};
             }
         `);
     }
@@ -472,35 +506,28 @@
                 const userSelections = Array.isArray(info.selections?.user) ? info.selections.user : [];
 
                 const isCustomKey = userSelections.length > 0;
-                const selectionsHtml = isCustomKey ? userSelections.map(sel => {
-                    const isMissions = sel === 'missions';
-                    return `<span style="color: ${isMissions ? '#82c91e' : '#999'}; ${isMissions ? 'font-weight: bold;' : ''}">${sel}</span>`;
+                const selectionsHtml = isCustomKey ? userSelections.map((selection) => {
+                    const isMissions = selection === 'missions';
+                    return `<span class="${isMissions ? 'mt-good' : 'mt-muted'}">${selection}</span>`;
                 }).join(', ') : '';
 
                 keyInfoHtml = `
-                    <div style="
-                        background: #333;
-                        border: 1px solid #444;
-                        border-radius: 3px;
-                        padding: 12px;
-                        margin: 15px 0;
-                        font-size: 12px;
-                    ">
-                        <div style="color: #999; margin-bottom: 8px; font-weight: bold;">API Key Info</div>
-                        <div style="color: #ddd; margin-bottom: 5px;">
-                            <span style="color: #999;">Access Type:</span> <span style="color: #82c91e; font-weight: bold;">${access.type || 'Unknown'}</span>
+                    <div class="mt-card">
+                        <div class="mt-card-title">API Key Info</div>
+                        <div class="mt-row">
+                            <span class="mt-muted">Access Type:</span> <span class="mt-good">${access.type || 'Unknown'}</span>
                         </div>
-                        <div style="color: #ddd; margin-bottom: 5px;">
-                            <span style="color: #999;">Access Level:</span> <span style="color: #82c91e; font-weight: bold;">${access.level ?? 'Unknown'}</span>
+                        <div class="mt-row">
+                            <span class="mt-muted">Access Level:</span> <span class="mt-good">${access.level ?? 'Unknown'}</span>
                         </div>
                         ${isCustomKey ? `
-                            <div style="color: #999; margin-top: 10px; font-size: 11px;">
+                            <div class="mt-selections">
                                 <strong>User Selections:</strong><br>
                                 ${selectionsHtml}
                             </div>
                         ` : ''}
                         ${!userSelections.includes('missions') ? `
-                            <div style="color: #E54C19; margin-top: 10px; font-size: 11px; font-weight: bold;">
+                            <div class="mt-error" style="margin-top: 10px; font-size: 11px;">
                                 ⚠ Critical: <code>missions</code> selection not detected
                             </div>
                         ` : ''}
@@ -508,17 +535,8 @@
                 `;
             } catch (e) {
                 keyInfoHtml = `
-                    <div style="
-                        background: #333;
-                        border: 1px solid #E54C19;
-                        border-radius: 3px;
-                        padding: 12px;
-                        margin: 15px 0;
-                        font-size: 12px;
-                        color: #E54C19;
-                        font-weight: bold;
-                    ">
-                        ⚠ Connection Error: ${e.message}
+                    <div class="mt-card" style="border-color: ${TORN.red};">
+                        <div class="mt-error">⚠ Connection Error: ${e.message}</div>
                     </div>
                 `;
             }
@@ -527,70 +545,38 @@
         const modal = document.createElement('div');
         modal.id = 'mission-tracker-settings';
         modal.innerHTML = `
-            <div id="mission-modal-overlay" style="
-                position: fixed;
-                top: 0; left: 0; right: 0; bottom: 0;
-                z-index: 10000;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            ">
-                <div style="
-                    padding: 25px;
-                    width: 420px;
-                    max-width: 90%;
-                ">
-                    <h3 style="margin-top: 0;">⚙️ Mission Tracker — v3.2.3</h3>
-
-                    <label style="display: block; margin: 15px 0 5px;">
-                        API Key
-                    </label>
-                    <input type="password" id="api-key-input"
-                           value="${apiKey}"
-                           placeholder="Enter your API key..."
-                           style="
-                               width: 100%;
-                               padding: 8px;
-                               box-sizing: border-box;
-                           ">
-
-                    <div style="
-                        background: #333;
-                        border: 1px solid #444;
-                        padding: 12px;
-                        margin: 12px 0;
-                        font-size: 11px;
-                        border-radius: 3px;
-                    ">
-                        <div style="margin-bottom: 8px; color: #999; font-weight: bold;">Required Permissions</div>
-                        <div style="margin-bottom: 5px; color: #ddd;">
-                            <span style="color: #999;">Access Level:</span> <span style="color: #82c91e;">Limited</span>+
+            <div class="mt-overlay">
+                <div class="mt-panel">
+                    <div class="mt-header">⚙️ Mission Tracker Settings</div>
+                    <div class="mt-body">
+                        <div class="mt-field">
+                            <label for="api-key-input">API Key</label>
+                            <input type="password" id="api-key-input" class="mt-input"
+                                   value="${apiKey}"
+                                   placeholder="Enter your API key...">
                         </div>
-                        <div style="margin-bottom: 10px; color: #ddd;">
-                            <span style="color: #999;">Required Selection:</span> <code>missions</code>
+
+                        <div class="mt-card">
+                            <div class="mt-card-title">Required Permissions</div>
+                            <div class="mt-row">
+                                <span class="mt-muted">Access Level:</span> <span class="mt-good">Limited</span>+
+                            </div>
+                            <div class="mt-row">
+                                <span class="mt-muted">Required Selection:</span> <code>missions</code>
+                            </div>
+                            <a class="mt-link-button" href="https://www.torn.com/preferences.php#tab=api?step=addNewKey&title=MissionTracker&user=missions" target="_blank">Create New Key</a>
                         </div>
-                        <a href="https://www.torn.com/preferences.php#tab=api?step=addNewKey&title=MissionTracker&user=missions" target="_blank" style="
-                            display: inline-block;
-                            padding: 6px 12px;
-                            background: linear-gradient(180deg, #111 0%, #555 25%, #333 60%, #333 78%, #111 100%);
-                            border: 1px solid #111;
-                            color: #eee;
-                            text-decoration: none;
-                            border-radius: 3px;
-                            font-weight: bold;
-                            text-shadow: 0 0 5px #000;
-                        ">Create New Key</a>
-                    </div>
 
-                    ${keyInfoHtml}
+                        ${keyInfoHtml}
 
-                    <div style="margin-top: 20px; display: flex; gap: 10px;">
-                        <button id="save-mission-settings" style="flex: 1; padding: 10px;">Save</button>
-                        <button id="cancel-mission-settings" style="flex: 1; padding: 10px;">Cancel</button>
-                    </div>
+                        <div class="mt-actions">
+                            <button id="save-mission-settings" class="mt-primary">Save</button>
+                            <button id="cancel-mission-settings">Cancel</button>
+                        </div>
 
-                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #444; font-size: 10px; color: #999;">
-                        [🔒] Key stored in local storage — No external servers
+                        <div class="mt-footer-note">
+                            [🔒] Key stored in local storage, no external servers
+                        </div>
                     </div>
                 </div>
             </div>
@@ -609,8 +595,8 @@
             modal.remove();
             refreshMissions(true);
         };
-        modal.querySelector('#mission-modal-overlay').onclick = (e) => {
-            if (e.target.id === 'mission-modal-overlay') modal.remove();
+        modal.querySelector('.mt-overlay').onclick = (e) => {
+            if (e.target.classList.contains('mt-overlay')) modal.remove();
         };
     }
 
@@ -651,7 +637,7 @@
 
         setupMutationObserver();
 
-        console.log('[Mission Tracker] Mission Tracker initialized. Running v3.2.3');
+        console.log('[Mission Tracker] Mission Tracker initialized. Running v3.2.4');
     }
 
     GM_registerMenuCommand('Settings', showSettings);

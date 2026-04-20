@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Guard
 // @namespace    torn-chain-guard
-// @version      1.6.3
+// @version      1.6.4
 // @description  Prevents accidental attacks when within range of a chain bonus threshold
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -19,7 +19,7 @@
 
 /**
  * ╔══════════════════════════════════════════════════════════╗
- * ║  Torn Chain Guard v1.6.3                                ║
+ * ║  Torn Chain Guard v1.6.4                                ║
  * ║  Prevent accidental attacks near chain bonus thresholds ║
  * ╚══════════════════════════════════════════════════════════╝
  */
@@ -617,17 +617,19 @@
                 left: 0;
                 right: 0;
                 bottom: 0;
-                background: rgba(0,0,0,0.8);
+                background: rgba(0, 0, 0, 0.85);
             }
             #chain-guard-settings .cg-panel {
                 position: relative;
-                background: ${TORN.bg};
-                border: 1px solid ${TORN.border};
-                border-radius: 4px;
-                width: 400px;
+                width: 420px;
                 max-width: 90%;
+                background: ${TORN.panel};
+                border: 1px solid ${TORN.borderLight};
+                border-radius: 4px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
                 font-family: Arial, sans-serif;
                 color: ${TORN.text};
+                overflow: hidden;
             }
             #chain-guard-settings .cg-header {
                 background: ${TORN.headerGradient};
@@ -636,18 +638,21 @@
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                font-size: 14px;
                 font-weight: bold;
+                color: #fff;
+                text-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
             }
             #chain-guard-settings .cg-close {
-                background: none;
+                background: transparent;
                 border: none;
                 color: ${TORN.textMuted};
                 cursor: pointer;
-                font-size: 18px;
+                font-size: 20px;
                 padding: 0 4px;
             }
             #chain-guard-settings .cg-close:hover {
-                color: ${TORN.text};
+                color: #fff;
             }
             #chain-guard-settings .cg-body {
                 padding: 16px;
@@ -658,55 +663,59 @@
             #chain-guard-settings .cg-field label {
                 display: block;
                 margin-bottom: 6px;
-                font-size: 13px;
+                font-size: 12px;
+                font-weight: bold;
                 color: ${TORN.textMuted};
             }
             #chain-guard-settings .cg-field input {
                 width: 100%;
                 padding: 8px 12px;
-                background: ${TORN.panel};
-                border: 1px solid ${TORN.border};
+                background: linear-gradient(0deg, #111 0%, #000 100%);
+                border: 1px solid ${TORN.borderLight};
                 border-radius: 3px;
-                color: ${TORN.text};
+                color: #fff;
                 font-size: 14px;
                 box-sizing: border-box;
             }
+            #chain-guard-settings .cg-field input:focus {
+                border-color: ${TORN.blue};
+                outline: none;
+                box-shadow: 0 0 2px rgba(116, 192, 252, 0.6);
+            }
             #chain-guard-settings .cg-info {
                 background: ${TORN.panel};
-                padding: 12px;
+                border: 1px solid ${TORN.borderLight};
                 border-radius: 3px;
-                font-size: 13px;
+                padding: 12px;
+                font-size: 12px;
             }
             #chain-guard-settings .cg-info p {
                 margin: 6px 0;
             }
             #chain-guard-settings .cg-footer {
-                padding: 12px 16px;
-                border-top: 1px solid ${TORN.border};
+                padding: 12px 16px 16px;
                 display: flex;
-                justify-content: flex-end;
-                gap: 8px;
+                gap: 10px;
             }
             #chain-guard-settings .cg-footer button {
-                padding: 8px 16px;
-                border: 1px solid ${TORN.border};
+                flex: 1;
+                padding: 10px 16px;
+                background: linear-gradient(180deg, #111 0%, #555 25%, #333 60%, #333 78%, #111 100%);
+                border: 1px solid #111;
                 border-radius: 3px;
+                color: #eee;
                 cursor: pointer;
                 font-size: 13px;
+                font-family: Arial, sans-serif;
+                font-weight: bold;
+                text-shadow: 0 0 5px #000;
+            }
+            #chain-guard-settings .cg-footer button:hover {
+                background: linear-gradient(180deg, #333 0%, #777 25%, #555 59%, #666 78%, #333 100%);
+                color: #fff;
             }
             #chain-guard-settings .cg-save {
-                background: linear-gradient(to bottom, #555, ${TORN.panel});
-                color: ${TORN.text};
-            }
-            #chain-guard-settings .cg-save:hover {
-                background: linear-gradient(to bottom, #666, #444);
-            }
-            #chain-guard-settings .cg-cancel {
-                background: ${TORN.bg};
-                color: ${TORN.textMuted};
-            }
-            #chain-guard-settings .cg-cancel:hover {
-                color: ${TORN.text};
+                border-color: ${TORN.green};
             }
         `);
 
