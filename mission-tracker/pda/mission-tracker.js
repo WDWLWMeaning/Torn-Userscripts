@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Mission Tracker (PDA)
 // @namespace    torn-mission-tracker
-// @version      4.0.14
+// @version      4.0.15
 // @description  Track Torn missions with alerts. Uses PDA-APIKEY placeholder for automatic API access.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -10,6 +10,9 @@
 // Self-initializing shared menu - creates PDAScriptsMenu if not already present
 (function() {
     'use strict';
+
+    // PDA replaces this with the actual API key at runtime
+    let PDA_API_KEY = '###PDA-APIKEY###';
 
     // Prevent duplicate script execution
     if (window.__missionTrackerPDALoaded) {
@@ -21,13 +24,6 @@
     // ============================================
     // SHARED MENU INITIALIZER (runs once globally)
     // ============================================
-    
-    function getPdaApiKey() {
-        // PDA replaces ###PDA-APIKEY### at runtime
-        // Use a function to read it fresh each time (in case PDA replaces it after initial parse)
-        const key = "###PDA-APIKEY###";
-        return key;
-    }
     if (!window.PDAScriptsMenu) {
         const STYLES = { bg: '#2a2a2a', panel: '#333', panelHover: '#444', text: '#ddd', textMuted: '#999', border: '#555', accent: '#82c91e' };
         const POS_KEY = 'pda_shared_menu_position';
@@ -249,17 +245,14 @@
     }
 
     function getApiKey() {
-        // Get fresh value from function (PDA replaces ###PDA-APIKEY### at runtime)
-        const pdaKey = getPdaApiKey();
+        // PDA replaces ###PDA-APIKEY### at runtime in the PDA_API_KEY variable
         const placeholder = '###PDA-APIKEY###';
-        const isPlaceholder = pdaKey === placeholder;
         
-        log('getApiKey check - isPlaceholder:', isPlaceholder, '| value length:', pdaKey?.length);
+        log('PDA_API_KEY value:', PDA_API_KEY);
         
-        // PDA replaces ###PDA-APIKEY### at runtime - check if it's been replaced
-        if (pdaKey && !isPlaceholder && pdaKey.length > 10) {
+        if (PDA_API_KEY && PDA_API_KEY !== placeholder && PDA_API_KEY.length > 10) {
             log('Using PDA-provided API key');
-            return pdaKey;
+            return PDA_API_KEY;
         }
         // Fallback to manual setting if PDA key not available
         if (window.PDAScriptsMenu) {
@@ -483,7 +476,7 @@
 
     function init() {
         try {
-            log('v4.0.14 initializing...');
+            log('v4.0.15 initializing...');
             registerWithSharedMenu();
 
             // Initial refresh with error handling
