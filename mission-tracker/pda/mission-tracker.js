@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Mission Tracker (PDA)
 // @namespace    torn-mission-tracker
-// @version      4.0.9
+// @version      4.0.11
 // @description  Track Torn missions with alerts. Uses PDA-APIKEY placeholder for automatic API access.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -244,15 +244,23 @@
     }
 
     function getApiKey() {
+        // Debug: log what PDA_API_KEY actually is
+        log('PDA_API_KEY check:', typeof PDA_API_KEY, PDA_API_KEY === '###PDA-APIKEY###' ? 'NOT_REPLACED' : 'REPLACED', 'length:', PDA_API_KEY?.length);
+        
         // PDA replaces ###PDA-APIKEY### at runtime - check if it's been replaced
         if (PDA_API_KEY && PDA_API_KEY !== '###PDA-APIKEY###' && PDA_API_KEY.length > 10) {
+            log('Using PDA-provided API key');
             return PDA_API_KEY;
         }
         // Fallback to manual setting if PDA key not available
         if (window.PDAScriptsMenu) {
-            return window.PDAScriptsMenu.getSetting('missionTracker', 'apiKey', '');
+            const manualKey = window.PDAScriptsMenu.getSetting('missionTracker', 'apiKey', '');
+            if (manualKey) log('Using manual API key from settings');
+            return manualKey;
         }
-        return storageGet('mt_api_key');
+        const storageKey = storageGet('mt_api_key');
+        if (storageKey) log('Using API key from localStorage');
+        return storageKey;
     }
 
     async function apiRequest(path) {
@@ -336,41 +344,68 @@
         document.head.appendChild(style);
     }
 
-    function findMissionsLink() {
-        // Try multiple selectors to find the missions nav item
+    function findMissionsContainer() {
+        // First try to find #nav-missions (like Tampermonkey)
+        const navMissions = document.getElementById('nav-missions');
+        if (navMissions) {
+            // Look for .area-row___iBD8N inside it (Torn's nav structure)
+            const areaRow = navMissions.querySelector('.area-row___iBD8N, [class*="area-row"]');
+            if (areaRow) return areaRow;
+            return navMissions;
+        }
+
+        // Fallback: try to find missions link directly
         const selectors = [
-            '#nav-missions',
             'a[href*="sid=missions"]',
             'a[href*="/missions.php"]',
             '[class*="nav"] a[href*="mission"]',
             '[class*="sidebar"] a[href*="mission"]',
             'a[title*="Missions" i]',
-            'a[title*="Contract" i]'
+            'a[title*="Contract" i]',
+            '[class*="dashboard"] [class*="status"]'
         ];
         for (const sel of selectors) {
             const el = document.querySelector(sel);
-            if (el) return el;
+            if (el) {
+                // If it's a link, return its parent for positioning
+                if (el.tagName === 'A') {
+                    return el.parentElement || el;
+                }
+                return el;
+            }
         }
         return null;
     }
 
+    function createBadge(container) {
+        if (!container) return null;
+
+        // Remove existing badge if present
+        const existing = document.getElementById('mt-mission-badge');
+        if (existing) existing.remove();
+
+        const badge = document.createElement('span');
+        badge.id = 'mt-mission-badge';
+
+        // Make container relative for absolute positioning
+        if (container.style.position !== 'relative' && container.style.position !== 'absolute') {
+            container.style.position = 'relative';
+        }
+
+        container.appendChild(badge);
+        return badge;
+    }
+
     function updateBadge(status) {
         ensureStyles();
-        const nav = findMissionsLink();
-        if (!nav) {
-            log('Missions nav not found, will retry');
-            return;
-        }
-
-        // Make sure parent has relative positioning
-        if (nav.style.position !== 'relative' && nav.style.position !== 'absolute') {
-            nav.style.position = 'relative';
-        }
 
         if (!badgeElement || !document.body.contains(badgeElement)) {
-            badgeElement = document.createElement('span');
-            badgeElement.id = 'mt-mission-badge';
-            nav.appendChild(badgeElement);
+            const container = findMissionsContainer();
+            if (!container) {
+                log('Missions container not found, will retry');
+                return;
+            }
+            badgeElement = createBadge(container);
         }
 
         if (!badgeElement) return;
@@ -439,7 +474,7 @@
 
     function init() {
         try {
-            log('v4.0.9 initializing...');
+            log('v4.0.11 initializing...');
             registerWithSharedMenu();
 
             // Initial refresh with error handling
