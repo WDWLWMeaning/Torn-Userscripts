@@ -31,18 +31,36 @@ commit-meta:
   script:
     - |
       echo "Committing generated meta files..."
-
+      
+      # Check if GITLAB_TOKEN is set
+      if [ -z "$GITLAB_TOKEN" ]; then
+        echo "ERROR: GITLAB_TOKEN is not set. Cannot push changes."
+        echo "Please add GITLAB_TOKEN to your CI/CD variables (Settings > CI/CD > Variables)"
+        exit 1
+      fi
+      
       git remote set-url origin "https://oauth2:${GITLAB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
-
-      meta_files=$(find . -path './*/tampermonkey/*.meta.js' -type f | sort)
-
-      if [ -n "$meta_files" ] && [ -n "$(printf '%s\n' "$meta_files" | xargs git status --porcelain 2>/dev/null)" ]; then
-        printf '%s\n' "$meta_files" | xargs git add
+      
+      # Find all meta files
+      meta_files=$(find . -name '*.meta.js' -path '*/tampermonkey/*' -type f 2>/dev/null | sort)
+      
+      if [ -z "$meta_files" ]; then
+        echo "No meta files found"
+        exit 0
+      fi
+      
+      # Add all meta files
+      echo "$meta_files" | while read -r file; do
+        git add "$file"
+      done
+      
+      # Check if there are staged changes
+      if git diff --cached --quiet; then
+        echo "No changes to meta files"
+      else
         git commit -m "CI: Update meta files [skip ci]"
         git push origin HEAD:${CI_COMMIT_REF_NAME}
         echo "✓ Meta files committed and pushed"
-      else
-        echo "No changes to meta files"
       fi
   only:
     - main
