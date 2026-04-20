@@ -2,7 +2,7 @@
 // @name         Torn PDA Script Boilerplate
 // @namespace    torn-pda-boilerplate
 // @version      1.0.0
-// @description  Boilerplate for Torn PDA userscripts with shared settings hub integration
+// @description  Self-contained boilerplate for Torn PDA userscripts with cooperative header sharing
 // @author       Kevin
 // @match        https://www.torn.com/*
 // @run-at       document-start
@@ -11,25 +11,24 @@
 /**
  * ╔══════════════════════════════════════════════════════════╗
  * ║  Torn PDA Script Boilerplate v1.0.0                      ║
- * ║  Template for creating PDA-compatible userscripts        ║
+ * ║  Self-contained with cooperative header sharing          ║
  * ╚══════════════════════════════════════════════════════════╝
  * 
- * INSTRUCTIONS:
- * 1. Copy this file as your starting point
- * 2. Change @name, @namespace, @description, @author
- * 3. Implement your script logic in the init() function
- * 4. Register with the shared settings hub (optional but recommended)
- * 5. Test in Torn PDA
+ * KEY PRINCIPLE: Each script is self-contained and works independently.
+ * Scripts cooperatively share header space WITHOUT dependencies.
  * 
- * REQUIRED SETUP:
- * - Install "Torn PDA Shared Settings Hub" script FIRST
- * - Then install this script (and your modified versions)
+ * HOW IT WORKS:
+ * 1. Script checks for shared container (#torn-pda-scripts-container)
+ * 2. If not found, creates one next to hamburger menu
+ * 3. Adds its OWN button to this shared container
+ * 4. Manages its own settings independently
  * 
- * The Hub provides:
- * - Single settings button in header (next to hamburger)
- * - Unified settings modal
- * - Script registration/discovery
- * - Consistent Torn-native styling
+ * BENEFITS:
+ * ✓ No dependencies between scripts
+ * ✓ Install/remove in any order
+ * ✓ Each script works standalone
+ * ✓ Clean shared header space
+ * ✓ No "hub" script required
  */
 
 (function() {
@@ -39,45 +38,136 @@
     // CONFIGURATION - Customize these for your script
     // ═══════════════════════════════════════════════════════════
     const SCRIPT_CONFIG = {
-        id: 'my-script-id',           // Unique ID (no spaces, use dashes)
+        id: 'my-script-id',           // Unique ID (no spaces)
         name: 'My Script Name',        // Display name
         version: '1.0.0',              // Script version
-        icon: '🔧',                    // Icon for settings hub (emoji or text)
-        order: 100                     // Order in settings list (lower = higher)
+        icon: '🔧',                    // Icon for header button
     };
 
     const CONFIG = {
-        // Your script's config options here
-        POLL_INTERVAL_MS: 300,         // For PDA-safe DOM polling
+        POLL_INTERVAL_MS: 500,         // For PDA-safe DOM polling
         SETTINGS_KEY: 'my_script_settings'
     };
 
     // ═══════════════════════════════════════════════════════════
-    // TORN NATIVE COLORS - Use these for consistent styling
+    // TORN NATIVE COLORS
     // ═══════════════════════════════════════════════════════════
     const TORN = {
-        bg: '#444',                    // Page background
-        panel: '#333',                 // Panel background
-        panelHover: '#555',            // Hover state
-        text: '#ddd',                  // Primary text
-        textMuted: '#999',             // Secondary text
-        green: '#82c91e',              // Success/accent
-        blue: '#74c0fc',               // Links
-        red: '#E54C19',                // Errors/warnings
-        yellow: '#F08C00',             // Warnings
-        border: '#444',                // Borders
-        borderLight: '#555',           // Light borders
-        headerGradient: 'linear-gradient(180deg, #777 0%, #333 100%)'
+        bg: '#444',
+        panel: '#333',
+        panelHover: '#555',
+        text: '#ddd',
+        textMuted: '#999',
+        green: '#82c91e',
+        blue: '#74c0fc',
+        red: '#E54C19',
+        border: '#444',
+        borderLight: '#555'
     };
 
     // ═══════════════════════════════════════════════════════════
-    // STATE
+    // COOPERATIVE HEADER (No dependencies!)
     // ═══════════════════════════════════════════════════════════
-    let isInitialized = false;
-    let settings = {};
+
+    function findHamburgerMenu() {
+        const selectors = [
+            '.header-menu.left .header-menu-icon',
+            '.header-menu-icon',
+            '[class*="header-menu"] button',
+            '.top_header_button.header-menu-icon'
+        ];
+        for (const sel of selectors) {
+            const el = document.querySelector(sel);
+            if (el) return el;
+        }
+        return null;
+    }
+
+    function getOrCreateSharedContainer() {
+        // Check if another script already created the container
+        let container = document.getElementById('torn-pda-scripts-container');
+        if (container) return container;
+
+        const hamburger = findHamburgerMenu();
+        if (!hamburger) return null;
+
+        // Create shared container
+        container = document.createElement('div');
+        container.id = 'torn-pda-scripts-container';
+        container.style.cssText = `
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: 8px;
+        `;
+
+        // Insert next to hamburger
+        const headerMenu = hamburger.closest('.header-menu, [class*="header-menu"]');
+        if (headerMenu) {
+            headerMenu.insertAdjacentElement('afterend', container);
+        } else {
+            hamburger.insertAdjacentElement('afterend', container);
+        }
+
+        return container;
+    }
+
+    function ensureHeaderButton() {
+        const btnId = `pda-script-btn-${SCRIPT_CONFIG.id}`;
+        if (document.getElementById(btnId)) return true;
+
+        const container = getOrCreateSharedContainer();
+        if (!container) return false;
+
+        const btn = document.createElement('button');
+        btn.id = btnId;
+        btn.type = 'button';
+        btn.title = `${SCRIPT_CONFIG.name} settings`;
+        btn.setAttribute('aria-label', `${SCRIPT_CONFIG.name} settings`);
+        btn.textContent = SCRIPT_CONFIG.icon;
+        btn.style.cssText = `
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            background: transparent;
+            border: 1px solid ${TORN.border};
+            border-radius: 4px;
+            color: ${TORN.text};
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            padding: 0;
+        `;
+
+        // Click handler
+        btn.addEventListener('click', openSettings);
+
+        // Touch feedback for PDA
+        btn.addEventListener('touchstart', () => {
+            btn.style.background = TORN.panelHover;
+            btn.style.borderColor = TORN.green;
+        });
+        btn.addEventListener('touchend', () => {
+            setTimeout(() => {
+                btn.style.background = 'transparent';
+                btn.style.borderColor = TORN.border;
+            }, 200);
+        });
+
+        container.appendChild(btn);
+        console.log(`[${SCRIPT_CONFIG.name}] Added to shared header`);
+        return true;
+    }
+
+    function pollForHeader() {
+        if (ensureHeaderButton()) return;
+        setTimeout(pollForHeader, CONFIG.POLL_INTERVAL_MS);
+    }
 
     // ═══════════════════════════════════════════════════════════
-    // STORAGE HELPERS
+    // STORAGE
     // ═══════════════════════════════════════════════════════════
     function loadSettings() {
         try {
@@ -88,63 +178,39 @@
         }
     }
 
-    function saveSettings() {
+    function saveSettings(data) {
         try {
-            localStorage.setItem(CONFIG.SETTINGS_KEY, JSON.stringify(settings));
+            localStorage.setItem(CONFIG.SETTINGS_KEY, JSON.stringify(data));
         } catch (e) {
-            console.error(`[${SCRIPT_CONFIG.name}] Failed to save settings:`, e);
+            console.error(`[${SCRIPT_CONFIG.name}] Save failed:`, e);
         }
     }
 
     function getDefaultSettings() {
         return {
-            // Your default settings here
-            enabled: true,
-            // option1: 'default_value'
+            enabled: true
+            // Add your defaults here
         };
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // PDA-SAFE DOM POLLING
-    // ═══════════════════════════════════════════════════════════
-    function pollForElement(selector, callback, timeout = 10000) {
-        const startTime = Date.now();
-        
-        const check = () => {
-            const el = document.querySelector(selector);
-            if (el) {
-                callback(el);
-                return;
-            }
-            
-            if (Date.now() - startTime < timeout) {
-                setTimeout(check, CONFIG.POLL_INTERVAL_MS);
-            } else {
-                console.log(`[${SCRIPT_CONFIG.name}] Timeout waiting for: ${selector}`);
-            }
-        };
-        
-        check();
     }
 
     // ═══════════════════════════════════════════════════════════
     // SETTINGS UI
     // ═══════════════════════════════════════════════════════════
-    function createSettingsModal() {
+    function openSettings() {
+        const settings = loadSettings();
+        const modalId = `${SCRIPT_CONFIG.id}-settings`;
+
         // Remove existing
-        const existing = document.getElementById(`${SCRIPT_CONFIG.id}-settings`);
+        const existing = document.getElementById(modalId);
         if (existing) existing.remove();
 
         const modal = document.createElement('div');
-        modal.id = `${SCRIPT_CONFIG.id}-settings`;
+        modal.id = modalId;
         modal.innerHTML = `
             <div style="
                 position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(0, 0, 0, 0.85);
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.85);
                 z-index: 999999;
                 display: flex;
                 align-items: flex-start;
@@ -161,7 +227,7 @@
                     box-shadow: 0 4px 20px rgba(0,0,0,0.5);
                 ">
                     <div style="
-                        background: ${TORN.headerGradient};
+                        background: linear-gradient(180deg, #777 0%, #333 100%);
                         padding: 12px 16px;
                         border-bottom: 1px solid ${TORN.border};
                         display: flex;
@@ -169,45 +235,32 @@
                         align-items: center;
                     ">
                         <h3 style="
-                            margin: 0;
-                            color: #fff;
-                            font-size: 14px;
-                            font-weight: bold;
-                            text-shadow: 0 0 2px rgba(0,0,0,0.8);
-                        ">${SCRIPT_CONFIG.icon} ${SCRIPT_CONFIG.name} Settings</h3>
+                            margin: 0; color: #fff; font-size: 14px;
+                            font-weight: bold; text-shadow: 0 0 2px rgba(0,0,0,0.8);
+                        ">${SCRIPT_CONFIG.icon} ${SCRIPT_CONFIG.name}</h3>
                         <button id="${SCRIPT_CONFIG.id}-close" style="
-                            background: transparent;
-                            border: none;
-                            color: ${TORN.textMuted};
-                            font-size: 20px;
-                            cursor: pointer;
-                            padding: 0 4px;
+                            background: transparent; border: none;
+                            color: ${TORN.textMuted}; font-size: 20px;
+                            cursor: pointer; padding: 0 4px;
                         ">×</button>
                     </div>
                     <div style="padding: 16px;">
-                        <!-- Your settings UI here -->
+                        <!-- YOUR SETTINGS HERE -->
                         <div style="margin-bottom: 16px;">
                             <label style="
-                                display: block;
-                                color: ${TORN.textMuted};
-                                font-size: 12px;
-                                font-weight: bold;
+                                display: block; color: ${TORN.textMuted};
+                                font-size: 12px; font-weight: bold;
                                 margin-bottom: 6px;
-                            ">Example Setting</label>
+                            ">Enable Feature</label>
                             <input type="checkbox" id="${SCRIPT_CONFIG.id}-enabled" 
                                 ${settings.enabled ? 'checked' : ''}
                                 style="margin-right: 8px;">
-                            <span style="color: ${TORN.text};">Enable feature</span>
+                            <span style="color: ${TORN.text};">Enabled</span>
                         </div>
                         
-                        <div style="
-                            margin-top: 20px;
-                            display: flex;
-                            gap: 10px;
-                        ">
+                        <div style="margin-top: 20px; display: flex; gap: 10px;">
                             <button id="${SCRIPT_CONFIG.id}-save" style="
-                                flex: 1;
-                                padding: 12px;
+                                flex: 1; padding: 12px;
                                 background: ${TORN.panelHover};
                                 border: 1px solid ${TORN.borderLight};
                                 color: ${TORN.text};
@@ -223,66 +276,42 @@
 
         document.body.appendChild(modal);
 
-        // Close handlers
-        modal.querySelector(`#${SCRIPT_CONFIG.id}-close`).addEventListener('click', () => modal.remove());
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal.querySelector('div')) modal.remove();
+        // Handlers
+        modal.querySelector(`#${SCRIPT_CONFIG.id}-close`).addEventListener('click', () => {
+            modal.remove();
         });
-
-        // Save handler
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal.firstElementChild) modal.remove();
+        });
         modal.querySelector(`#${SCRIPT_CONFIG.id}-save`).addEventListener('click', () => {
             settings.enabled = modal.querySelector(`#${SCRIPT_CONFIG.id}-enabled`).checked;
-            saveSettings();
+            saveSettings(settings);
             modal.remove();
             console.log(`[${SCRIPT_CONFIG.name}] Settings saved`);
         });
     }
 
     // ═══════════════════════════════════════════════════════════
-    // REGISTER WITH SHARED HUB
+    // YOUR SCRIPT LOGIC HERE
     // ═══════════════════════════════════════════════════════════
-    function registerWithHub() {
-        // Check if hub exists (it should be loaded first)
-        if (window.TornPDASettingsHub) {
-            window.TornPDASettingsHub.register({
-                id: SCRIPT_CONFIG.id,
-                title: SCRIPT_CONFIG.name,
-                icon: SCRIPT_CONFIG.icon,
-                order: SCRIPT_CONFIG.order,
-                openSettings: createSettingsModal
-            });
-            console.log(`[${SCRIPT_CONFIG.name}] Registered with Settings Hub`);
-        } else {
-            // Hub not loaded yet, try again later
-            console.log(`[${SCRIPT_CONFIG.name}] Settings Hub not found. Load the Hub script first for best experience.`);
-        }
+    function initScript() {
+        const settings = loadSettings();
+        if (!settings.enabled) return;
+
+        console.log(`[${SCRIPT_CONFIG.name}] v${SCRIPT_CONFIG.version} running`);
+        
+        // Your main logic here
+        // Example: pollForElement('.selector', (el) => modifyElement(el));
     }
 
     // ═══════════════════════════════════════════════════════════
-    // MAIN SCRIPT LOGIC
+    // INIT
     // ═══════════════════════════════════════════════════════════
     function init() {
-        if (isInitialized) return;
-        isInitialized = true;
-
-        // Load settings
-        settings = loadSettings();
-
-        // Register with shared hub
-        registerWithHub();
-
-        // Your main script logic here
-        console.log(`[${SCRIPT_CONFIG.name}] v${SCRIPT_CONFIG.version} initialized`);
-
-        // Example: Poll for an element and modify it
-        // pollForElement('.some-selector', (el) => {
-        //     // Do something with the element
-        // });
+        pollForHeader();
+        initScript();
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // START
-    // ═══════════════════════════════════════════════════════════
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {

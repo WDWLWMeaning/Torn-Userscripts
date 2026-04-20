@@ -840,18 +840,81 @@
         }
     }
 
-    // Register with Shared Settings Hub (if available)
-    function registerWithSettingsHub() {
-        if (window.TornPDASettingsHub && !window.TornPDASettingsHub.isRegistered('chain-guard')) {
-            window.TornPDASettingsHub.register({
-                id: 'chain-guard',
-                title: 'Chain Guard',
-                icon: '🛡️',
-                order: 10,
-                openSettings: openSettings
-            });
-            log('Registered with Shared Settings Hub');
+    // ==================== COOPERATIVE HEADER BUTTON ====================
+    // Each script adds its own button to a shared container - no dependencies
+
+    function findHamburgerMenu() {
+        const selectors = [
+            '.header-menu.left .header-menu-icon',
+            '.header-menu-icon',
+            '[class*="header-menu"] button',
+            '.top_header_button.header-menu-icon'
+        ];
+        for (const sel of selectors) {
+            const el = document.querySelector(sel);
+            if (el) return el;
         }
+        return null;
+    }
+
+    function getOrCreateSharedContainer() {
+        let container = document.getElementById('torn-pda-scripts-container');
+        if (container) return container;
+
+        const hamburger = findHamburgerMenu();
+        if (!hamburger) return null;
+
+        container = document.createElement('div');
+        container.id = 'torn-pda-scripts-container';
+        container.style.cssText = 'display:inline-flex;align-items:center;gap:6px;margin-left:8px;';
+
+        const headerMenu = hamburger.closest('.header-menu, [class*="header-menu"]');
+        if (headerMenu) {
+            headerMenu.insertAdjacentElement('afterend', container);
+        } else {
+            hamburger.insertAdjacentElement('afterend', container);
+        }
+
+        return container;
+    }
+
+    function ensureHeaderButton() {
+        const btnId = 'pda-script-btn-chain-guard';
+        if (document.getElementById(btnId)) return true;
+
+        const container = getOrCreateSharedContainer();
+        if (!container) return false;
+
+        const btn = document.createElement('button');
+        btn.id = btnId;
+        btn.type = 'button';
+        btn.title = 'Chain Guard settings';
+        btn.setAttribute('aria-label', 'Chain Guard settings');
+        btn.textContent = '🛡️';
+        btn.style.cssText = `
+            display:flex;align-items:center;justify-content:center;
+            width:32px;height:32px;background:transparent;
+            border:1px solid ${TORN.border};border-radius:4px;
+            color:${TORN.text};font-size:16px;cursor:pointer;
+            transition:all 0.2s;padding:0;
+        `;
+        btn.addEventListener('click', openSettings);
+
+        // Touch feedback
+        btn.addEventListener('touchstart', () => {
+            btn.style.background = TORN.panelHover;
+            btn.style.borderColor = TORN.green;
+        });
+        btn.addEventListener('touchend', () => {
+            setTimeout(() => {
+                btn.style.background = 'transparent';
+                btn.style.borderColor = TORN.border;
+            }, 200);
+        });
+
+        container.appendChild(btn);
+        log('Added header button');
+        return true;
     }
 
     function updateGuard() {
@@ -859,7 +922,7 @@
         const inDangerZone = isInDangerZone();
         const ignored = isGuardIgnored();
 
-        registerWithSettingsHub();
+        ensureHeaderButton();
 
         if (lastDangerZoneState !== inDangerZone) {
             log(inDangerZone ? 'Entered danger zone' : 'Exited danger zone');
@@ -944,7 +1007,7 @@
         log('Init start');
         ensureStyles();
         loadChainCache();
-        registerWithSettingsHub();
+        ensureHeaderButton();
         ensurePolling();
         parseChainFromDOM(true);
         updateGuard();
