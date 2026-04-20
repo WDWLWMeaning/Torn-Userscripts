@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Mission Tracker (PDA)
 // @namespace    torn-mission-tracker
-// @version      4.0.16
+// @version      4.0.17
 // @description  Track Torn missions with alerts. Uses PDA-APIKEY placeholder for automatic API access.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -9,7 +9,7 @@
 
 // Self-initializing shared menu - creates PDAScriptsMenu if not already present
 (function() {
-    'use strict';
+    // Note: 'use strict' removed - can cause issues with PDA runtime replacement
 
     // PDA replaces this with the actual API key at runtime
     let PDA_API_KEY = '###PDA-APIKEY###';
@@ -483,7 +483,7 @@
 
     function init() {
         try {
-            log('v4.0.16 initializing...');
+            log('v4.0.17 initializing...');
             registerWithSharedMenu();
 
             // Initial refresh with error handling
