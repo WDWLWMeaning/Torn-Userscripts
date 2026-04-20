@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Guard (PDA)
 // @namespace    torn-chain-guard
-// @version      2.0.1
+// @version      2.0.2
 // @description  Prevents accidental attacks when within range of a chain bonus threshold (uses shared PDA menu)
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -10,6 +10,13 @@
 // Self-initializing shared menu - creates PDAScriptsMenu if not already present
 (function() {
     'use strict';
+
+    // Prevent duplicate script execution
+    if (window.__chainGuardPDALoaded) {
+        console.log('[Chain Guard] Already loaded, skipping');
+        return;
+    }
+    window.__chainGuardPDALoaded = true;
 
     // ============================================
     // SHARED MENU INITIALIZER (runs once globally)
@@ -24,7 +31,16 @@
         
         window.PDAScriptsMenu = {
             _scripts: new Map(), _button: null, _dropdown: null, _isDragging: false,
-            register(id, name, cfg) { this._scripts.set(id, { id, name, config: cfg, values: this._load(id) }); this._saveReg(id, name); this._updateUI(); },
+            register(id, name, cfg) {
+                // Prevent duplicate registrations
+                if (this._scripts.has(id)) {
+                    console.log('[PDA Menu] Script already registered:', id);
+                    return;
+                }
+                this._scripts.set(id, { id, name, config: cfg, values: this._load(id) });
+                this._saveReg(id, name);
+                this._updateUI();
+            },
             unregister(id) { this._scripts.delete(id); this._updateUI(); },
             getSetting(id, k, d) { const s = this._scripts.get(id); return s ? (s.values[k] ?? d) : d; },
             setSetting(id, k, v) { const s = this._scripts.get(id); if (s) { s.values[k] = v; this._save(id, s.values); if (s.config.onChange) s.config.onChange(k, v); } },
@@ -329,7 +345,7 @@
 
     // Init
     function init() {
-        log('v2.0.1 initializing...');
+        log('v2.0.2 initializing...');
         ensureStyles();
         loadChainCache();
         registerWithSharedMenu();

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Mission Tracker (PDA)
 // @namespace    torn-mission-tracker
-// @version      4.0.2
+// @version      4.0.3
 // @description  Track Torn missions with alerts. Uses ###PDA-APIKEY### for automatic API access.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -10,6 +10,13 @@
 // Self-initializing shared menu - creates PDAScriptsMenu if not already present
 (function() {
     'use strict';
+
+    // Prevent duplicate script execution
+    if (window.__missionTrackerPDALoaded) {
+        console.log('[Mission Tracker] Already loaded, skipping');
+        return;
+    }
+    window.__missionTrackerPDALoaded = true;
 
     // PDA will replace this placeholder with the actual API key at runtime
     const PDA_API_KEY = "_###PDA-APIKEY###_";
@@ -27,7 +34,16 @@
         
         window.PDAScriptsMenu = {
             _scripts: new Map(), _button: null, _dropdown: null, _isDragging: false,
-            register(id, name, cfg) { this._scripts.set(id, { id, name, config: cfg, values: this._load(id) }); this._saveReg(id, name); this._updateUI(); },
+            register(id, name, cfg) {
+                // Prevent duplicate registrations
+                if (this._scripts.has(id)) {
+                    console.log('[PDA Menu] Script already registered:', id);
+                    return;
+                }
+                this._scripts.set(id, { id, name, config: cfg, values: this._load(id) });
+                this._saveReg(id, name);
+                this._updateUI();
+            },
             unregister(id) { this._scripts.delete(id); this._updateUI(); },
             getSetting(id, k, d) { const s = this._scripts.get(id); return s ? (s.values[k] ?? d) : d; },
             setSetting(id, k, v) { const s = this._scripts.get(id); if (s) { s.values[k] = v; this._save(id, s.values); if (s.config.onChange) s.config.onChange(k, v); } },
@@ -300,7 +316,7 @@
     }
 
     function init() {
-        log('v4.0.2 initializing...');
+        log('v4.0.3 initializing...');
         registerWithSharedMenu();
 
         refresh();
