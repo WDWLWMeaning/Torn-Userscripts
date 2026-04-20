@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Guard (PDA)
 // @namespace    torn-chain-guard
-// @version      1.6.5
+// @version      1.6.6
 // @description  Prevents accidental attacks when within range of a chain bonus threshold
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -14,6 +14,7 @@
         DEFAULT_THRESHOLD: 15,
         CACHE_KEY: 'chain_guard_data',
         SETTINGS_KEY: 'chain_guard_settings',
+        POSITION_KEY: 'chain_guard_button_position',
         BONUS_THRESHOLDS: [10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000],
         DOM_CHAIN_SELECTOR: '.bar-value___uxnah',
         SIDEBAR_CHAIN_FALLBACK_SELECTORS: [
@@ -839,7 +840,34 @@
     }
 
     // ==================== LEFT SIDEBAR BUTTON ====================
-    // Static button fixed to the left side of the viewport
+    // Draggable button fixed to the viewport, remembers position
+
+    function loadButtonPosition() {
+        try {
+            const saved = storageGet(CONFIG.POSITION_KEY, '{}');
+            const pos = JSON.parse(saved);
+            return {
+                top: pos.top ?? 100,
+                left: pos.left ?? 10
+            };
+        } catch {
+            return { top: 100, left: 10 };
+        }
+    }
+
+    function saveButtonPosition(top, left) {
+        storageSet(CONFIG.POSITION_KEY, JSON.stringify({ top, left }));
+    }
+
+    function clampToViewport(top, left, btnWidth = 40, btnHeight = 40) {
+        const margin = 5;
+        const maxTop = window.innerHeight - btnHeight - margin;
+        const maxLeft = window.innerWidth - btnWidth - margin;
+        return {
+            top: Math.max(margin, Math.min(top, maxTop)),
+            left: Math.max(margin, Math.min(left, maxLeft))
+        };
+    }
 
     function ensureHeaderButton() {
         const btnId = 'pda-script-btn-chain-guard';
@@ -855,14 +883,19 @@
             const btn = document.createElement('button');
             btn.id = btnId;
             btn.type = 'button';
-            btn.title = 'Chain Guard settings';
+            btn.title = 'Chain Guard settings (hold to drag)';
             btn.setAttribute('aria-label', 'Chain Guard settings');
             btn.textContent = '🛡️';
-            // Fixed position on the left side of the viewport
+
+            // Load saved position or use default
+            const pos = loadButtonPosition();
+            const clampedPos = clampToViewport(pos.top, pos.left);
+
+            // Fixed position on the viewport
             btn.style.cssText = `
                 position: fixed;
-                top: 100px;
-                left: 10px;
+                top: ${clampedPos.top}px;
+                left: ${clampedPos.left}px;
                 z-index: 9999;
                 display: flex;
                 align-items: center;
@@ -875,28 +908,137 @@
                 color: ${TORN.text};
                 font-size: 20px;
                 cursor: pointer;
-                transition: all 0.2s;
+                transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
                 padding: 0;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.3);
                 -webkit-tap-highlight-color: transparent;
+                touch-action: none;
+                user-select: none;
             `;
 
-            // Click handler with error catching
+            // Drag state
+            let isDragging = false;
+            let dragStartTime = 0;
+            let startX = 0;
+            let startY = 0;
+            let startTop = 0;
+            let startLeft = 0;
+            const DRAG_THRESHOLD_MS = 300; // Long press to start drag
+
+            function startDrag(startClientX, startClientY) {
+                isDragging = true;
+                btn.style.cursor = 'grabbing';
+                btn.style.transition = 'none';
+                btn.style.boxShadow = '0 4px 16px rgba(130, 201, 30, 0.5)';
+                startX = startClientX;
+                startY = startClientY;
+                const currentTop = parseInt(btn.style.top, 10) || clampedPos.top;
+                const currentLeft = parseInt(btn.style.left, 10) || clampedPos.left;
+                startTop = currentTop;
+                startLeft = currentLeft;
+            }
+
+            function moveDrag(clientX, clientY) {
+                if (!isDragging) return;
+                const dx = clientX - startX;
+                const dy = clientY - startY;
+                const newTop = startTop + dy;
+                const newLeft = startLeft + dx;
+                const clamped = clampToViewport(newTop, newLeft);
+                btn.style.top = clamped.top + 'px';
+                btn.style.left = clamped.left + 'px';
+            }
+
+            function endDrag() {
+                if (!isDragging) return;
+                isDragging = false;
+                btn.style.cursor = 'pointer';
+                btn.style.transition = 'background 0.2s, border-color 0.2s, box-shadow 0.2s';
+                btn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+                // Save position
+                const finalTop = parseInt(btn.style.top, 10);
+                const finalLeft = parseInt(btn.style.left, 10);
+                saveButtonPosition(finalTop, finalLeft);
+            }
+
+            // Mouse events
+            btn.addEventListener('mousedown', (e) => {
+                dragStartTime = Date.now();
+                const timer = setTimeout(() => {
+                    if (Date.now() - dragStartTime >= DRAG_THRESHOLD_MS - 50) {
+                        startDrag(e.clientX, e.clientY);
+                    }
+                }, DRAG_THRESHOLD_MS);
+
+                const mouseMoveHandler = (e) => {
+                    if (isDragging) {
+                        e.preventDefault();
+                        moveDrag(e.clientX, e.clientY);
+                    }
+                };
+
+                const mouseUpHandler = () => {
+                    clearTimeout(timer);
+                    document.removeEventListener('mousemove', mouseMoveHandler);
+                    document.removeEventListener('mouseup', mouseUpHandler);
+                    endDrag();
+                };
+
+                document.addEventListener('mousemove', mouseMoveHandler);
+                document.addEventListener('mouseup', mouseUpHandler);
+            });
+
+            // Touch events
+            btn.addEventListener('touchstart', (e) => {
+                dragStartTime = Date.now();
+                const touch = e.touches[0];
+                const timer = setTimeout(() => {
+                    if (Date.now() - dragStartTime >= DRAG_THRESHOLD_MS - 50) {
+                        startDrag(touch.clientX, touch.clientY);
+                    }
+                }, DRAG_THRESHOLD_MS);
+
+                const touchMoveHandler = (e) => {
+                    if (isDragging) {
+                        e.preventDefault();
+                        const touch = e.touches[0];
+                        moveDrag(touch.clientX, touch.clientY);
+                    }
+                };
+
+                const touchEndHandler = () => {
+                    clearTimeout(timer);
+                    document.removeEventListener('touchmove', touchMoveHandler);
+                    document.removeEventListener('touchend', touchEndHandler);
+                    endDrag();
+                };
+
+                document.addEventListener('touchmove', touchMoveHandler, { passive: false });
+                document.addEventListener('touchend', touchEndHandler);
+            }, { passive: true });
+
+            // Click handler - only if not dragging
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                try {
-                    openSettings();
-                } catch (err) {
-                    logError('Error opening settings:', err);
-                    alert('Chain Guard: Error opening settings. Check console.');
+                // Don't open settings if we just finished a drag
+                const timeSinceDragStart = Date.now() - dragStartTime;
+                if (timeSinceDragStart < DRAG_THRESHOLD_MS && !isDragging) {
+                    try {
+                        openSettings();
+                    } catch (err) {
+                        logError('Error opening settings:', err);
+                        alert('Chain Guard: Error opening settings. Check console.');
+                    }
                 }
             });
 
             // Hover effects
             btn.addEventListener('mouseenter', () => {
-                btn.style.background = TORN.panelHover;
-                btn.style.borderColor = TORN.green;
+                if (!isDragging) {
+                    btn.style.background = TORN.panelHover;
+                    btn.style.borderColor = TORN.green;
+                }
             });
 
             btn.addEventListener('mouseleave', () => {
@@ -1038,7 +1180,7 @@
 
     function init() {
         log('═══════════════════════════════════════');
-        log('Chain Guard PDA v1.6.5 initializing...');
+        log('Chain Guard PDA v1.6.6 initializing...');
         log('URL:', window.location.href);
         
         ensureStyles();
