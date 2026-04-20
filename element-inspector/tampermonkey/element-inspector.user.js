@@ -12,29 +12,25 @@
 (function() {
     'use strict';
 
-    const TOOLBAR_SELECTOR = '.header-navigation.right .toolbar';
-    const SEARCH_SELECTOR = '.find-wrapper';
+    const LEFT_MENU_SELECTOR = '.header-menu.left.leftMenu___md3Ch';
 
     function addSettingsDropdown() {
-        const toolbar = document.querySelector(TOOLBAR_SELECTOR);
-        if (!toolbar) return false;
-        if (toolbar.querySelector('.torn-settings-wrapper')) return true;
+        const leftMenu = document.querySelector(LEFT_MENU_SELECTOR);
+        if (!leftMenu) return false;
+        if (leftMenu.querySelector('.torn-settings-wrapper')) return true;
 
-        const searchLi = toolbar.querySelector(SEARCH_SELECTOR);
-        if (!searchLi) return false;
+        // Create wrapper div for the settings button (inside the left menu div)
+        const wrapper = document.createElement('div');
+        wrapper.className = 'torn-settings-wrapper';
+        wrapper.style.cssText = 'display: inline-block; vertical-align: top; position: relative;';
 
-        // Create li wrapper for the settings button
-        const li = document.createElement('li');
-        li.className = 'torn-settings-wrapper';
-        li.style.cssText = 'display: inline-block; vertical-align: top; position: relative;';
-
-        // Create button
+        // Create button - use header-menu-icon class to match hamburger button styling
         const button = document.createElement('button');
         button.type = 'button';
-        button.className = 'top_header_button button torn-settings-btn';
+        button.className = 'top_header_button header-menu-icon torn-settings-btn';
         button.setAttribute('aria-label', 'Settings');
         button.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="3"></circle>
                 <path d="M12 1v6m0 6v6m4.22-10.22l4.24-4.24M6.34 17.66l-4.24 4.24M23 12h-6m-6 0H1m20.24 4.24l-4.24-4.24M6.34 6.34L2.1 2.1"></path>
             </svg>
@@ -47,7 +43,7 @@
             display: none;
             position: absolute;
             top: 100%;
-            right: 0;
+            left: 0;
             background: #1a1a1a;
             border: 1px solid #333;
             border-radius: 4px;
@@ -105,17 +101,18 @@
             dropdown.style.display = 'none';
         });
 
-        li.appendChild(button);
-        li.appendChild(dropdown);
+        wrapper.appendChild(button);
+        wrapper.appendChild(dropdown);
 
-        // Insert AFTER the search button
-        if (searchLi.nextSibling) {
-            toolbar.insertBefore(li, searchLi.nextSibling);
+        // Insert at the beginning of the left menu (before menu-items if present)
+        const menuItems = leftMenu.querySelector('.menu-items');
+        if (menuItems) {
+            leftMenu.insertBefore(wrapper, menuItems);
         } else {
-            toolbar.appendChild(li);
+            leftMenu.appendChild(wrapper);
         }
 
-        console.log('[Settings Dropdown] Added to toolbar (right of search)');
+        console.log('[Settings Dropdown] Added to left menu');
         return true;
     }
 
