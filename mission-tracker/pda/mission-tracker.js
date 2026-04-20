@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Torn Mission Tracker (PDA)
 // @namespace    torn-mission-tracker
-// @version      4.0.5
-// @description  Track Torn missions with alerts. Uses ###PDA-APIKEY### for automatic API access.
+// @version      4.0.6
+// @description  Track Torn missions with alerts. Uses PDA-APIKEY placeholder for automatic API access.
 // @author       Kevin
 // @match        https://www.torn.com/*
 // ==/UserScript==
@@ -18,7 +18,6 @@
     }
     window.__missionTrackerPDALoaded = true;
 
-    // PDA will replace this placeholder with the actual API key at runtime
     const PDA_API_KEY = "_###PDA-APIKEY###_";
 
     // ============================================
@@ -416,7 +415,7 @@
     }
 
     function init() {
-        log('v4.0.5 initializing...');
+        log('v4.0.6 initializing...');
         registerWithSharedMenu();
 
         refresh();
