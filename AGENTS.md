@@ -122,18 +122,43 @@ const TORN = {
 - Panels: Border radius `4px`, border `1px solid #444`
 - Buttons: Match Torn's native button gradient
 
-## Version Management
+## ⚠️ MANDATORY: Version Bumping
 
-Always bump versions when making changes:
-- Use semantic versioning: `MAJOR.MINOR.PATCH`
-- Update both `.user.js` AND `.meta.js` (Tampermonkey)
-- Update `@version` in header
-- Commit with descriptive message
+**ALWAYS bump the version after ANY change to a script file.**
 
-## Before Committing
+This is critical for:
+- Tampermonkey auto-updates to detect changes
+- Users to know they're on latest version
+- Tracking what changed when
 
-1. Check file is in correct folder (`tampermonkey/` or `pda/`)
-2. Verify naming matches conventions
-3. Bump version if modified
-4. Test that script works standalone
-5. Ensure Torn-native styling
+### Rules
+1. **Any code change = version bump** (even tiny fixes)
+2. **Both files if Tampermonkey:** Update `.user.js` AND `.meta.js`
+3. **Use semantic versioning:** `MAJOR.MINOR.PATCH`
+   - `PATCH` (0.0.1→0.0.2): Bug fixes, small tweaks
+   - `MINOR` (0.0.x→0.1.0): New features
+   - `MAJOR` (0.x.x→1.0.0): Breaking changes
+
+### Where to Update
+```
+// In the userscript header:
+// @version      1.2.3    ← UPDATE THIS
+
+// In .meta.js (Tampermonkey only):
+// @version      1.2.3    ← UPDATE THIS TOO
+```
+
+### Examples
+- Fixed typo → 1.0.0 → 1.0.1
+- Added new feature → 1.0.5 → 1.1.0
+- Rewrote core logic → 1.5.0 → 2.0.0
+
+## Before Committing Checklist
+
+- [ ] File is in correct folder (`tampermonkey/` or `pda/`)
+- [ ] Naming follows conventions
+- [ ] **⚠️ Version bumped in `@version` header**
+- [ ] **⚠️ Meta file updated too (Tampermonkey)**
+- [ ] Script works standalone
+- [ ] Uses Torn-native styling
+- [ ] Commit message describes the change
