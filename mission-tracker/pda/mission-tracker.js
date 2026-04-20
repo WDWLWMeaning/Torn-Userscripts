@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Mission Tracker (PDA)
 // @namespace    torn-mission-tracker
-// @version      5.1.0
+// @version      5.1.1
 // @description  Track Torn missions with time-based alerts. Red = urgent (<24h), Yellow = warning (<48h). Uses PDA-APIKEY for automatic API access.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -182,30 +182,47 @@
         style.textContent = `
             #mt-mission-badge {
                 position: absolute;
-                top: 4px;
-                right: 4px;
-                min-width: 14px;
-                height: 14px;
-                padding: 0 3px;
-                border-radius: 7px;
-                font-size: 10px;
-                font-weight: 700;
-                line-height: 14px;
-                text-align: center;
-                color: #fff;
-                pointer-events: none;
-                z-index: 100;
-                box-sizing: border-box;
+                right: 12px;
+                top: 50%;
+                transform: translateY(-50%);
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 18px;
+                height: 18px;
                 background: ${TORN.panel};
+                color: ${TORN.text};
                 border: 1px solid ${TORN.border};
+                border-radius: 3px;
+                font-size: 11px;
+                font-weight: 700;
+                font-family: Arial, sans-serif;
+                text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+                box-shadow: 0 1px 2px rgba(0,0,0,0.5);
+                pointer-events: none;
+                user-select: none;
             }
             #mt-mission-badge.urgent {
+                color: #fff;
+                border-color: ${TORN.red};
                 background: ${TORN.red};
-                box-shadow: 0 0 8px rgba(229,76,25,0.6);
+                box-shadow: 0 0 8px rgba(229, 76, 25, 0.6);
             }
             #mt-mission-badge.warning {
-                background: ${TORN.yellow};
                 color: #000;
+                border-color: ${TORN.yellow};
+                background: ${TORN.yellow};
+                box-shadow: 0 0 6px rgba(240, 140, 0, 0.5);
+            }
+            @media (max-width: 768px) {
+                #mt-mission-badge {
+                    right: 6px;
+                    top: 6px;
+                    transform: none;
+                    width: 14px;
+                    height: 14px;
+                    font-size: 8px;
+                }
             }
         `;
         document.head.appendChild(style);
@@ -314,7 +331,7 @@
     }
 
     function init() {
-        log('v5.1.0 initializing...');
+        log('v5.1.1 initializing...');
         registerWithSharedMenu();
 
         // Wait for nav to exist
