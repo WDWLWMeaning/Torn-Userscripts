@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Mission Tracker (PDA)
 // @namespace    torn-mission-tracker
-// @version      4.0.4
+// @version      4.0.5
 // @description  Track Torn missions with alerts. Uses ###PDA-APIKEY### for automatic API access.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -67,27 +67,83 @@
                 b.addEventListener('mouseleave', () => { b.style.transform = 'scale(1)'; if (!this._dropdown?.classList.contains('open')) b.style.borderColor = STYLES.border; });
                 document.body.appendChild(b); this._button = b; return b;
             },
-            _toggle() { if (this._dropdown) { this._dropdown.remove(); this._dropdown = null; } else this._show(); },
+            _toggle() { 
+                // Check for orphaned dropdown (DOM element exists but reference lost)
+                const existing = document.getElementById('pda-shared-menu');
+                if (existing) {
+                    existing.remove();
+                    this._dropdown = null;
+                    return;
+                }
+                if (this._dropdown) { 
+                    this._dropdown.remove(); 
+                    this._dropdown = null; 
+                } else { 
+                    this._show(); 
+                }
+            },
             _show() {
-                const d = document.createElement('div'); d.id = 'pda-shared-menu'; d.className = 'open';
-                const r = this._button.getBoundingClientRect(); const W = 320; const H = Math.min(400, window.innerHeight * 0.7);
+                // Remove any orphaned dropdown first
+                const orphaned = document.getElementById('pda-shared-menu');
+                if (orphaned) orphaned.remove();
+                
+                const d = document.createElement('div'); 
+                d.id = 'pda-shared-menu'; 
+                d.className = 'open';
+                this._dropdown = d; // Set reference immediately
+                
+                // Calculate and set position
+                this._calcMenuPosition(d);
+                
+                const h = document.createElement('div'); 
+                h.style.cssText = `padding:12px 16px;border-bottom:1px solid ${STYLES.border};font-weight:bold;font-size:14px;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(180deg,#3a3a3a 0%,${STYLES.bg} 100%);border-radius:8px 8px 0 0;`; 
+                h.innerHTML = `<span>🎮 PDA Scripts</span><span style="color:${STYLES.textMuted};font-size:12px;font-weight:normal">${this._scripts.size} active</span>`; 
+                d.appendChild(h);
+                
+                if (this._scripts.size === 0) { 
+                    const e = document.createElement('div'); 
+                    e.style.cssText = `padding:24px;text-align:center;color:${STYLES.textMuted};`; 
+                    e.textContent = 'No scripts registered'; 
+                    d.appendChild(e); 
+                } else {
+                    this._scripts.forEach(s => d.appendChild(this._createSection(s)));
+                }
+                
+                // Close handler that also clears tracking
+                const close = e => { 
+                    if (!d.contains(e.target) && e.target !== this._button) { 
+                        d.remove(); 
+                        this._dropdown = null; 
+                        this._stopPositionTracking();
+                        document.removeEventListener('click', close); 
+                    } 
+                };
+                
+                document.body.appendChild(d);
+                // Delay adding close listener to avoid immediate close
+                setTimeout(() => document.addEventListener('click', close), 100);
+                
+                // Start position tracking
+                this._startPositionTracking();
+            },
+            _calcMenuPosition(d) {
+                if (!this._button) return;
+                const r = this._button.getBoundingClientRect(); 
+                const W = 320; 
+                const H = Math.min(400, window.innerHeight * 0.7);
                 const margin = 10;
                 
-                // Determine position: if button is on right half, menu goes to left
                 const buttonCenter = r.left + r.width / 2;
                 const screenCenter = window.innerWidth / 2;
                 const isRightSide = buttonCenter > screenCenter;
                 
                 let left, top;
                 if (isRightSide) {
-                    // Position to left of button
                     left = Math.max(margin, r.left - W - 8);
                 } else {
-                    // Position to right of button (or aligned with it)
                     left = Math.min(r.left, window.innerWidth - W - margin);
                 }
                 
-                // Vertical position: try below first, if not enough space, go above
                 const spaceBelow = window.innerHeight - r.bottom - margin;
                 const spaceAbove = r.top - margin;
                 if (spaceBelow >= 200 || spaceBelow >= spaceAbove) {
@@ -97,58 +153,30 @@
                 }
                 
                 d.style.cssText = `position:fixed;top:${top}px;left:${left}px;width:${W}px;max-height:${H}px;background:${STYLES.bg};border:1px solid ${STYLES.border};border-radius:8px;z-index:99998;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.5);font-family:Arial,sans-serif;color:${STYLES.text};`;
-                
-                // Store current position for drag updates
-                this._menuPos = { top, left };
-                
-                const h = document.createElement('div'); h.style.cssText = `padding:12px 16px;border-bottom:1px solid ${STYLES.border};font-weight:bold;font-size:14px;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(180deg,#3a3a3a 0%,${STYLES.bg} 100%);border-radius:8px 8px 0 0;`; h.innerHTML = `<span>🎮 PDA Scripts</span><span style="color:${STYLES.textMuted};font-size:12px;font-weight:normal">${this._scripts.size} active</span>`; d.appendChild(h);
-                if (this._scripts.size === 0) { const e = document.createElement('div'); e.style.cssText = `padding:24px;text-align:center;color:${STYLES.textMuted};`; e.textContent = 'No scripts registered'; d.appendChild(e); }
-                else this._scripts.forEach(s => d.appendChild(this._createSection(s)));
-                const close = e => { if (!d.contains(e.target) && e.target !== this._button) { d.remove(); this._dropdown = null; document.removeEventListener('click', close); } };
-                setTimeout(() => document.addEventListener('click', close), 0); document.body.appendChild(d); this._dropdown = d;
-                
-                // Start position tracking during drag
-                this._startPositionTracking();
             },
             _startPositionTracking() {
-                if (this._posTrackingInterval) clearInterval(this._posTrackingInterval);
+                this._stopPositionTracking(); // Clear any existing
                 this._posTrackingInterval = setInterval(() => {
-                    if (!this._dropdown || !this._button) {
-                        clearInterval(this._posTrackingInterval);
-                        this._posTrackingInterval = null;
+                    if (!this._button) {
+                        this._stopPositionTracking();
                         return;
                     }
-                    this._updateMenuPosition();
-                }, 50); // Update every 50ms during drag
+                    // Update position if dropdown exists
+                    if (this._dropdown && document.body.contains(this._dropdown)) {
+                        this._calcMenuPosition(this._dropdown);
+                    }
+                }, 50);
+            },
+            _stopPositionTracking() {
+                if (this._posTrackingInterval) {
+                    clearInterval(this._posTrackingInterval);
+                    this._posTrackingInterval = null;
+                }
             },
             _updateMenuPosition() {
-                if (!this._dropdown || !this._button) return;
-                
-                const r = this._button.getBoundingClientRect();
-                const W = 320; const H = Math.min(400, window.innerHeight * 0.7);
-                const margin = 10;
-                
-                const buttonCenter = r.left + r.width / 2;
-                const screenCenter = window.innerWidth / 2;
-                const isRightSide = buttonCenter > screenCenter;
-                
-                let left, top;
-                if (isRightSide) {
-                    left = Math.max(margin, r.left - W - 8);
-                } else {
-                    left = Math.min(r.left, window.innerWidth - W - margin);
+                if (this._dropdown && document.body.contains(this._dropdown)) {
+                    this._calcMenuPosition(this._dropdown);
                 }
-                
-                const spaceBelow = window.innerHeight - r.bottom - margin;
-                const spaceAbove = r.top - margin;
-                if (spaceBelow >= 200 || spaceBelow >= spaceAbove) {
-                    top = r.bottom + 8;
-                } else {
-                    top = Math.max(margin, r.top - H - 8);
-                }
-                
-                this._dropdown.style.top = top + 'px';
-                this._dropdown.style.left = left + 'px';
             },
             _createSection(s) {
                 const sec = document.createElement('div'); sec.style.cssText = `border-bottom:1px solid ${STYLES.border};`;
@@ -388,7 +416,7 @@
     }
 
     function init() {
-        log('v4.0.4 initializing...');
+        log('v4.0.5 initializing...');
         registerWithSharedMenu();
 
         refresh();
