@@ -162,3 +162,20 @@ This is critical for:
 - [ ] Script works standalone
 - [ ] Uses Torn-native styling
 - [ ] Commit message describes the change
+
+## CI/CD Setup (GitLab)
+
+The repository uses GitLab CI to auto-generate `.meta.js` files.
+
+### Required CI/CD Variables
+In GitLab project settings → CI/CD → Variables, add:
+- `GITLAB_TOKEN`: A project access token with `write_repository` permission
+
+### How CI Works
+1. **generate-meta** job: Runs `scripts/generate-meta.sh` to create `.meta.js` files
+2. **commit-meta** job: Commits any changed meta files back to the repo
+
+### Common CI Issues
+- **CI fails at commit-meta**: `GITLAB_TOKEN` is missing or invalid
+- **Meta files out of sync**: Run `./scripts/generate-meta.sh` locally and commit changes
+- **New script missing meta**: Ensure the script is in `tampermonkey/` folder and has `.user.js` extension
