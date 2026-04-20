@@ -124,18 +124,19 @@ See also: [mission-tracker/README.md](mission-tracker/README.md)
 
 ---
 
-### Userscript Boilerplate `v2.0.1`
+### Boilerplate `v1.0.0`
 
-A starter template for building your own Torn extensions.
+A starter template for building your own Torn extensions with PDA + Tampermonkey support.
 
 **Includes:**
-- Secure API key storage
-- Smart caching with TTL
-- Settings panel template
-- Torn API v2 helpers
-- Clean UI components
+- Shared PDA settings menu (draggable button, multiple scripts)
+- PDA API key auto-detection (`###PDA-APIKEY###`)
+- Tampermonkey-compatible structure
+- Number and toggle setting types
+- Smart caching helpers
+- Torn API v2 request helper
 
-**Get started:** Copy `userscript.js` and modify the `Features` object.
+**Get started:** Copy [`boilerplate.js`](boilerplate.js) and customize the `// YOUR SCRIPT CODE STARTS HERE` section.
 
 ---
 
