@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Mission Tracker (PDA)
 // @namespace    torn-mission-tracker
-// @version      4.0.7
+// @version      4.0.8
 // @description  Track Torn missions with alerts. Uses PDA-APIKEY placeholder for automatic API access.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -336,17 +336,41 @@
         document.head.appendChild(style);
     }
 
+    function findMissionsLink() {
+        // Try multiple selectors to find the missions nav item
+        const selectors = [
+            '#nav-missions',
+            'a[href*="sid=missions"]',
+            'a[href*="/missions.php"]',
+            '[class*="nav"] a[href*="mission"]',
+            '[class*="sidebar"] a[href*="mission"]',
+            'a[title*="Missions" i]',
+            'a[title*="Contract" i]'
+        ];
+        for (const sel of selectors) {
+            const el = document.querySelector(sel);
+            if (el) return el;
+        }
+        return null;
+    }
+
     function updateBadge(status) {
         ensureStyles();
-        const nav = document.getElementById('nav-missions');
-        if (!nav) return;
+        const nav = findMissionsLink();
+        if (!nav) {
+            log('Missions nav not found, will retry');
+            return;
+        }
+
+        // Make sure parent has relative positioning
+        if (nav.style.position !== 'relative' && nav.style.position !== 'absolute') {
+            nav.style.position = 'relative';
+        }
 
         if (!badgeElement || !document.body.contains(badgeElement)) {
             badgeElement = document.createElement('span');
             badgeElement.id = 'mt-mission-badge';
-            const row = nav.querySelector('.area-row___iBD8N, a[href*="missions"]');
-            if (row) row.style.position = 'relative';
-            if (row) row.appendChild(badgeElement);
+            nav.appendChild(badgeElement);
         }
 
         if (!badgeElement) return;
@@ -414,7 +438,7 @@
     }
 
     function init() {
-        log('v4.0.7 initializing...');
+        log('v4.0.8 initializing...');
         registerWithSharedMenu();
 
         refresh();
