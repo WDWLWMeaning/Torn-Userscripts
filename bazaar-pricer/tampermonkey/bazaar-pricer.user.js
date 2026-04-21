@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Bazaar Pricer
 // @namespace    torn-bazaar-pricer
-// @version      0.3.3
+// @version      0.4.0
 // @description  Add Weav3r-powered quick pricing buttons to Torn bazaar item listings with configurable undercutting.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -23,29 +23,39 @@
     const SCRIPT = {
         id: 'torn-bazaar-pricer',
         name: 'Torn Bazaar Pricer',
-        version: '0.3.3'
+        version: '0.4.0'
     };
 
     const CONFIG = {
         weav3rBaseUrl: 'https://weav3r.dev/api',
         cacheTtlMs: 60 * 1000,
-        observerDebounceMs: 250
+        observerDebounceMs: 250,
+        layoutMode: 'compare-all'
     };
 
     const TORN = {
-        bg: '#444',
         panel: '#333',
-        panelHover: '#555',
         text: '#ddd',
         textMuted: '#999',
         green: '#82c91e',
-        blue: '#74c0fc',
         red: '#E54C19',
-        yellow: '#F08C00',
         border: '#444',
         borderLight: '#555',
         headerGradient: 'linear-gradient(180deg, #777 0%, #333 100%)'
     };
+
+    const LAYOUT_PRESETS = [
+        { id: 'v1', label: '1', top: 14, right: 118, width: 178, direction: 'row' },
+        { id: 'v2', label: '2', top: 14, right: 118, width: 152, direction: 'column' },
+        { id: 'v3', label: '3', top: 14, right: 96, width: 140, direction: 'row' },
+        { id: 'v4', label: '4', top: 42, right: 118, width: 178, direction: 'row' },
+        { id: 'v5', label: '5', top: 42, right: 96, width: 140, direction: 'column' },
+        { id: 'v6', label: '6', top: 12, right: 210, width: 130, direction: 'row' },
+        { id: 'v7', label: '7', top: 40, right: 210, width: 130, direction: 'row' },
+        { id: 'v8', label: '8', top: 14, right: 150, width: 110, direction: 'column' },
+        { id: 'v9', label: '9', top: 56, right: 118, width: 178, direction: 'row' },
+        { id: 'v10', label: '10', top: 56, right: 150, width: 120, direction: 'column' }
+    ];
 
     const DEFAULT_SETTINGS = {
         enabled: true,
@@ -68,9 +78,6 @@
         },
         set(key, value) {
             GM_setValue(key, JSON.stringify(value));
-        },
-        del(key) {
-            GM_deleteValue(key);
         }
     };
 
@@ -121,10 +128,7 @@
     async function getMarketplaceItem(itemId) {
         const cacheKey = getCacheKey(itemId);
         const cached = Storage.get(cacheKey, null);
-        if (cached && (Date.now() - cached.timestamp) < CONFIG.cacheTtlMs) {
-            return cached.data;
-        }
-
+        if (cached && (Date.now() - cached.timestamp) < CONFIG.cacheTtlMs) return cached.data;
         const data = await weav3rRequest(`/marketplace/${itemId}`);
         Storage.set(cacheKey, { timestamp: Date.now(), data });
         return data;
@@ -239,26 +243,18 @@
                 color: #fff;
             }
 
-            #${SCRIPT.id}-modal .bp-btn {
-                padding: 9px 14px;
-            }
-
+            #${SCRIPT.id}-modal .bp-btn { padding: 9px 14px; }
             #${SCRIPT.id}-modal .bp-btn-primary,
             .${SCRIPT.id}-quick-btn,
-            .${SCRIPT.id}-pick-btn {
-                border-color: ${TORN.green};
-            }
+            .${SCRIPT.id}-pick-btn { border-color: ${TORN.green}; }
 
             li.clearfix.no-mods[data-group="child"] {
                 position: relative;
+                min-height: 86px;
             }
 
             .${SCRIPT.id}-cell {
                 position: absolute;
-                top: 14px;
-                right: 118px;
-                transform: none;
-                width: 178px;
                 display: flex;
                 flex-direction: column;
                 align-items: stretch;
@@ -267,12 +263,20 @@
                 z-index: 5;
             }
 
-            .${SCRIPT.id}-toolbar {
+            .${SCRIPT.id}-cell[data-layout-direction="row"] .${SCRIPT.id}-toolbar {
                 display: flex;
                 flex-direction: row;
                 align-items: center;
                 justify-content: flex-end;
                 gap: 6px;
+                width: 100%;
+            }
+
+            .${SCRIPT.id}-cell[data-layout-direction="column"] .${SCRIPT.id}-toolbar {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 5px;
                 width: 100%;
             }
 
@@ -294,12 +298,29 @@
                 text-overflow: ellipsis;
             }
 
-            .${SCRIPT.id}-status.error {
-                color: ${TORN.red};
+            .${SCRIPT.id}-cell[data-layout-direction="column"] .${SCRIPT.id}-status {
+                text-align: center;
+                white-space: normal;
             }
 
-            .${SCRIPT.id}-status.success {
-                color: ${TORN.green};
+            .${SCRIPT.id}-status.error { color: ${TORN.red}; }
+            .${SCRIPT.id}-status.success { color: ${TORN.green}; }
+
+            .${SCRIPT.id}-badge {
+                position: absolute;
+                top: -8px;
+                left: -8px;
+                min-width: 18px;
+                height: 18px;
+                padding: 0 4px;
+                border-radius: 999px;
+                background: ${TORN.red};
+                color: #fff;
+                font-size: 10px;
+                line-height: 18px;
+                text-align: center;
+                font-weight: bold;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.4);
             }
 
             .${SCRIPT.id}-picker-list {
@@ -346,8 +367,7 @@
     }
 
     function formatMoney(value) {
-        const amount = Number(value) || 0;
-        return `$${amount.toLocaleString('en-US')}`;
+        return `$${(Number(value) || 0).toLocaleString('en-US')}`;
     }
 
     function parseItemId(li) {
@@ -360,8 +380,7 @@
     function parseItemName(li) {
         const imgAlt = li.querySelector('img[alt]')?.getAttribute('alt')?.trim();
         if (imgAlt) return imgAlt;
-        const overflow = li.querySelector('.t-overflow');
-        return overflow?.textContent?.trim() || 'Unknown item';
+        return li.querySelector('.t-overflow')?.textContent?.trim() || 'Unknown item';
     }
 
     function getPriceInput(li) {
@@ -369,8 +388,7 @@
     }
 
     function getMarketValue(li) {
-        const info = li.querySelector('.info-wrap');
-        const text = info?.textContent || '';
+        const text = li.querySelector('.info-wrap')?.textContent || '';
         const match = text.match(/\$([\d,]+)/);
         return match ? Number(match[1].replace(/,/g, '')) : null;
     }
@@ -385,7 +403,6 @@
 
     function choosePrice(listings, settings, marketValue) {
         if (!Array.isArray(listings) || !listings.length) return null;
-
         const usable = listings
             .map((listing) => ({
                 price: Number(listing.price || listing.cost || 0),
@@ -397,19 +414,12 @@
             .sort((a, b) => a.price - b.price);
 
         if (!usable.length) return null;
-
         const target = usable[0];
         let price = Math.max(settings.minimumPrice, target.price - settings.undercutAmount);
-
         if (settings.ignoreBelowMarketValue && marketValue && price < marketValue) {
             price = Math.max(settings.minimumPrice, marketValue);
         }
-
-        return {
-            source: target,
-            value: price,
-            listings: usable
-        };
+        return { source: target, value: price, listings: usable };
     }
 
     function closeModal() {
@@ -420,7 +430,6 @@
         injectStyles();
         closeModal();
         const settings = loadSettings();
-
         const modal = document.createElement('div');
         modal.id = `${SCRIPT.id}-modal`;
         modal.innerHTML = `
@@ -453,7 +462,6 @@
                 </div>
             </div>
         `;
-
         document.body.appendChild(modal);
 
         modal.addEventListener('click', (event) => {
@@ -461,15 +469,13 @@
                 closeModal();
                 return;
             }
-
             if (event.target.dataset.action === 'save') {
-                const nextSettings = {
+                saveSettings({
                     enabled: modal.querySelector(`#${SCRIPT.id}-enabled`).checked,
                     undercutAmount: Math.max(0, Number(modal.querySelector(`#${SCRIPT.id}-undercut`).value) || 0),
                     minimumPrice: Math.max(1, Number(modal.querySelector(`#${SCRIPT.id}-minimum`).value) || 1),
                     ignoreBelowMarketValue: modal.querySelector(`#${SCRIPT.id}-ignore-market`).checked
-                };
-                saveSettings(nextSettings);
+                });
                 closeModal();
                 scanBazaarRows();
             }
@@ -480,28 +486,8 @@
         injectStyles();
         closeModal();
         const settings = loadSettings();
-
         const modal = document.createElement('div');
         modal.id = `${SCRIPT.id}-modal`;
-        const rows = listings.map((listing, index) => {
-            const suggested = Math.max(settings.minimumPrice, Number(listing.price) - settings.undercutAmount);
-            const seller = listing.seller || 'Unknown seller';
-            const metaBits = [
-                listing.bazaar ? `Bazaar: ${listing.bazaar}` : null,
-                listing.quantity ? `Qty: ${listing.quantity}` : null
-            ].filter(Boolean).join(' • ');
-            return `
-                <div class="${SCRIPT.id}-picker-item">
-                    <div>
-                        <div><strong>${seller}</strong></div>
-                        <div class="${SCRIPT.id}-picker-meta">${metaBits || 'Current listing'}</div>
-                        <div class="${SCRIPT.id}-picker-price">${formatMoney(listing.price)} → ${formatMoney(suggested)}</div>
-                    </div>
-                    <button class="${SCRIPT.id}-pick-btn" type="button" data-index="${index}">Use this</button>
-                </div>
-            `;
-        }).join('');
-
         modal.innerHTML = `
             <div class="bp-panel">
                 <div class="bp-header">
@@ -512,11 +498,29 @@
                     <div class="${SCRIPT.id}-picker-meta" style="margin-bottom: 10px;">
                         Item ID: ${itemId}${marketValue ? ` • Torn market value: ${formatMoney(marketValue)}` : ''}
                     </div>
-                    <div class="${SCRIPT.id}-picker-list">${rows || '<div>No listings found.</div>'}</div>
+                    <div class="${SCRIPT.id}-picker-list">
+                        ${listings.map((listing, index) => {
+                            const suggested = Math.max(settings.minimumPrice, Number(listing.price) - settings.undercutAmount);
+                            const seller = listing.seller || 'Unknown seller';
+                            const metaBits = [
+                                listing.bazaar ? `Bazaar: ${listing.bazaar}` : null,
+                                listing.quantity ? `Qty: ${listing.quantity}` : null
+                            ].filter(Boolean).join(' • ');
+                            return `
+                                <div class="${SCRIPT.id}-picker-item">
+                                    <div>
+                                        <div><strong>${seller}</strong></div>
+                                        <div class="${SCRIPT.id}-picker-meta">${metaBits || 'Current listing'}</div>
+                                        <div class="${SCRIPT.id}-picker-price">${formatMoney(listing.price)} → ${formatMoney(suggested)}</div>
+                                    </div>
+                                    <button class="${SCRIPT.id}-pick-btn" type="button" data-index="${index}">Use this</button>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
                 </div>
             </div>
         `;
-
         document.body.appendChild(modal);
 
         modal.addEventListener('click', (event) => {
@@ -524,13 +528,10 @@
                 closeModal();
                 return;
             }
-
             const pickButton = event.target.closest(`.${SCRIPT.id}-pick-btn`);
             if (!pickButton) return;
-
             const selected = listings[Number(pickButton.dataset.index)];
             if (!selected) return;
-
             let nextPrice = Math.max(settings.minimumPrice, Number(selected.price) - settings.undercutAmount);
             if (settings.ignoreBelowMarketValue && marketValue && nextPrice < marketValue) {
                 nextPrice = Math.max(settings.minimumPrice, marketValue);
@@ -544,10 +545,6 @@
         });
     }
 
-    function getActionsWrap(li) {
-        return li.querySelector('.actions-main-wrap');
-    }
-
     async function fetchListingContext(li, statusEl, loadingMessage = 'Loading current bazaar prices...') {
         const settings = loadSettings();
         if (!settings.enabled) {
@@ -555,21 +552,17 @@
             statusEl.className = `${SCRIPT.id}-status error`;
             return null;
         }
-
         const itemId = parseItemId(li);
         const itemName = parseItemName(li);
         const input = getPriceInput(li);
         const marketValue = getMarketValue(li);
-
         if (!itemId || !input) {
             statusEl.textContent = 'Could not detect item or price input';
             statusEl.className = `${SCRIPT.id}-status error`;
             return null;
         }
-
         statusEl.textContent = loadingMessage;
         statusEl.className = `${SCRIPT.id}-status`;
-
         try {
             const data = await getMarketplaceItem(itemId);
             const result = choosePrice(data.listings, settings, marketValue);
@@ -578,14 +571,7 @@
                 statusEl.className = `${SCRIPT.id}-status error`;
                 return null;
             }
-
-            return {
-                itemId,
-                itemName,
-                input,
-                marketValue,
-                result
-            };
+            return { itemId, itemName, input, marketValue, result };
         } catch (error) {
             console.error(`[${SCRIPT.name}]`, error);
             statusEl.textContent = `Pricing lookup failed: ${error.message}`;
@@ -596,58 +582,40 @@
 
     async function handlePriceLookup(li, toolbar, quickButton, statusEl) {
         quickButton.disabled = true;
-
         try {
             const context = await fetchListingContext(li, statusEl);
             if (!context) return;
-
             setReactInputValue(context.input, context.result.value);
             statusEl.textContent = `Set ${formatMoney(context.result.value)} from ${context.result.source.seller || 'lowest listing'} (${formatMoney(context.result.source.price)})`;
             statusEl.className = `${SCRIPT.id}-status success`;
-
             const pickerButton = toolbar.querySelector(`.${SCRIPT.id}-picker-open`);
-            if (pickerButton) {
-                pickerButton.disabled = false;
-            }
+            if (pickerButton) pickerButton.disabled = false;
         } finally {
             quickButton.disabled = false;
         }
     }
 
-    function enhanceBazaarRow(li) {
-        if (li.dataset.bazaarPricerBound === '1') return;
-        const input = getPriceInput(li);
-        if (!input) return;
-
-        li.dataset.bazaarPricerBound = '1';
-
-        const actionsWrap = getActionsWrap(li);
-        if (!actionsWrap) return;
-
-        const amountWrap = li.querySelector('.amount-main-wrap');
-        if (!amountWrap) return;
-
-        const existingCell = li.querySelector(`.${SCRIPT.id}-cell`);
-        if (existingCell) existingCell.remove();
-
+    function createControlCell(li, preset) {
         const cell = document.createElement('div');
         cell.className = `${SCRIPT.id}-cell`;
-
-        const toolbar = document.createElement('div');
-        toolbar.className = `${SCRIPT.id}-toolbar`;
-        toolbar.innerHTML = `
-            <button type="button" class="${SCRIPT.id}-quick-btn">Bazaar</button>
-            <button type="button" class="${SCRIPT.id}-quick-btn ${SCRIPT.id}-picker-open" disabled>Pick</button>
+        cell.dataset.layoutId = preset.id;
+        cell.dataset.layoutDirection = preset.direction;
+        cell.style.top = `${preset.top}px`;
+        cell.style.right = `${preset.right}px`;
+        cell.style.width = `${preset.width}px`;
+        cell.innerHTML = `
+            <span class="${SCRIPT.id}-badge">${preset.label}</span>
+            <div class="${SCRIPT.id}-toolbar">
+                <button type="button" class="${SCRIPT.id}-quick-btn">Bazaar</button>
+                <button type="button" class="${SCRIPT.id}-quick-btn ${SCRIPT.id}-picker-open">Pick</button>
+            </div>
             <span class="${SCRIPT.id}-status"></span>
         `;
 
-        cell.appendChild(toolbar);
-
-        li.appendChild(cell);
-
+        const toolbar = cell.querySelector(`.${SCRIPT.id}-toolbar`);
         const quickButton = toolbar.querySelector(`.${SCRIPT.id}-quick-btn`);
         const pickerButton = toolbar.querySelector(`.${SCRIPT.id}-picker-open`);
-        const statusEl = toolbar.querySelector(`.${SCRIPT.id}-status`);
+        const statusEl = cell.querySelector(`.${SCRIPT.id}-status`);
 
         quickButton.addEventListener('click', () => handlePriceLookup(li, toolbar, quickButton, statusEl));
         pickerButton.addEventListener('click', async () => {
@@ -655,7 +623,6 @@
             try {
                 const context = await fetchListingContext(li, statusEl, 'Loading listings...');
                 if (!context) return;
-
                 openPicker({
                     itemId: context.itemId,
                     itemName: context.itemName,
@@ -664,12 +631,28 @@
                     statusEl,
                     marketValue: context.marketValue
                 });
-
                 statusEl.textContent = `Loaded ${context.result.listings.length} listings`;
                 statusEl.className = `${SCRIPT.id}-status success`;
             } finally {
                 pickerButton.disabled = false;
             }
+        });
+
+        return cell;
+    }
+
+    function enhanceBazaarRow(li) {
+        const input = getPriceInput(li);
+        if (!input) return;
+
+        li.querySelectorAll(`.${SCRIPT.id}-cell`).forEach((node) => node.remove());
+
+        const presets = CONFIG.layoutMode === 'compare-all'
+            ? LAYOUT_PRESETS
+            : [LAYOUT_PRESETS[0]];
+
+        presets.forEach((preset) => {
+            li.appendChild(createControlCell(li, preset));
         });
     }
 
@@ -677,36 +660,26 @@
         const settings = loadSettings();
         const rows = document.querySelectorAll('.items-cont li.clearfix.no-mods[data-group="child"]');
         rows.forEach((li) => {
-            if (!settings.enabled) {
-                const cell = li.querySelector(`.${SCRIPT.id}-cell`);
-                if (cell) cell.style.display = 'none';
-                return;
-            }
-
+            li.querySelectorAll(`.${SCRIPT.id}-cell`).forEach((cell) => {
+                cell.style.display = settings.enabled ? '' : 'none';
+            });
+            if (!settings.enabled) return;
             enhanceBazaarRow(li);
-            const cell = li.querySelector(`.${SCRIPT.id}-cell`);
-            if (cell) cell.style.display = '';
         });
     }
 
     function setupObserver() {
         if (observer) observer.disconnect();
-
         observer = new MutationObserver(() => {
             clearTimeout(refreshTimer);
             refreshTimer = setTimeout(scanBazaarRows, CONFIG.observerDebounceMs);
         });
-
         observer.observe(document.body, { childList: true, subtree: true });
     }
 
     function init() {
         injectStyles();
         GM_registerMenuCommand('Bazaar Pricer Settings', openSettings);
-        GM_registerMenuCommand('Bazaar Pricer Clear Cache', () => {
-            Object.keys(GM_getValue('___dummy___', null) || {});
-            alert('Use browser reload if you need fresh prices. Weav3r also caches for 60 seconds.');
-        });
         scanBazaarRows();
         setupObserver();
         console.log(`[${SCRIPT.name}] v${SCRIPT.version} ready`);
