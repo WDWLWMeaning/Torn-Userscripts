@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Bazaar Pricer (PDA)
 // @namespace    torn-bazaar-pricer-pda
-// @version      1.0.3
+// @version      1.0.4
 // @description  PDA companion for Bazaar Pricer with inline Weav3r listing picker beside bazaar price inputs.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -160,9 +160,9 @@
             },
             _createSection(s) {
                 const sec = document.createElement('div'); sec.style.cssText = `border-bottom:1px solid ${STYLES.border};`;
-                const h = document.createElement('div'); h.style.cssText = `padding:10px 16px;background:${STYLES.panel};font-weight:bold;font-size:13px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;`; h.innerHTML = `<span>${s.name}</span><span style="color:${STYLES.textMuted};font-size:12px;">▾</span>`; sec.appendChild(h);
-                const b = document.createElement('div'); b.style.cssText = 'padding:12px 16px;';
-                let collapsed = false;
+                const h = document.createElement('div'); h.style.cssText = `padding:10px 16px;background:${STYLES.panel};font-weight:bold;font-size:13px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;`; h.innerHTML = `<span>${s.name}</span><span style="color:${STYLES.textMuted};font-size:12px;">▸</span>`; sec.appendChild(h);
+                const b = document.createElement('div'); b.style.cssText = 'padding:12px 16px;display:none;';
+                let collapsed = true;
                 h.addEventListener('click', () => {
                     collapsed = !collapsed;
                     b.style.display = collapsed ? 'none' : 'block';
@@ -189,7 +189,7 @@
     const SCRIPT = {
         id: 'bazaar-pricer-pda',
         name: 'Bazaar Pricer (PDA)',
-        version: '1.0.1'
+        version: '1.0.4'
     };
 
     const CONFIG = {
