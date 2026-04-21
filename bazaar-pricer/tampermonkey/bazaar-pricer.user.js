@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Bazaar Pricer
 // @namespace    torn-bazaar-pricer
-// @version      1.0.1
+// @version      1.0.2
 // @description  Add a Weav3r-powered listing picker button beside Torn bazaar price inputs.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -23,7 +23,7 @@
     const SCRIPT = {
         id: 'torn-bazaar-pricer',
         name: 'Torn Bazaar Pricer',
-        version: '1.0.1'
+        version: '1.0.2'
     };
 
     const CONFIG = {
@@ -44,10 +44,7 @@
     };
 
     const DEFAULT_SETTINGS = {
-        enabled: true,
-        undercutAmount: 1,
-        minimumPrice: 1,
-        ignoreBelowMarketValue: false
+        undercutAmount: 1
     };
 
     let observer = null;
@@ -236,7 +233,7 @@
             #${SCRIPT.id}-modal .bp-btn-primary,
             .${SCRIPT.id}-picker-btn,
             .${SCRIPT.id}-pick-btn {
-                border-color: ${TORN.green};
+                border-color: #111;
             }
 
             .${SCRIPT.id}-input-group {
@@ -246,7 +243,10 @@
             }
 
             .${SCRIPT.id}-input-group > input.input-money[type="text"] {
-                width: 45px;
+                width: 45px !important;
+                min-width: 45px !important;
+                max-width: 45px !important;
+                flex: 0 0 45px;
             }
 
             .${SCRIPT.id}-picker-btn {
@@ -392,18 +392,6 @@
                         <label>Undercut amount</label>
                         <input type="number" id="${SCRIPT.id}-undercut" min="0" step="1" value="${settings.undercutAmount}">
                     </div>
-                    <div class="bp-field">
-                        <label>Minimum allowed price</label>
-                        <input type="number" id="${SCRIPT.id}-minimum" min="1" step="1" value="${settings.minimumPrice}">
-                    </div>
-                    <div class="bp-field bp-checkbox">
-                        <input type="checkbox" id="${SCRIPT.id}-enabled" ${settings.enabled ? 'checked' : ''}>
-                        <label for="${SCRIPT.id}-enabled">Enable script</label>
-                    </div>
-                    <div class="bp-field bp-checkbox">
-                        <input type="checkbox" id="${SCRIPT.id}-ignore-market" ${settings.ignoreBelowMarketValue ? 'checked' : ''}>
-                        <label for="${SCRIPT.id}-ignore-market">Never price below Torn market value shown on the row</label>
-                    </div>
                     <div class="bp-actions">
                         <button class="bp-btn" data-action="cancel" type="button">Cancel</button>
                         <button class="bp-btn bp-btn-primary" data-action="save" type="button">Save</button>
@@ -420,10 +408,7 @@
             }
             if (event.target.dataset.action === 'save') {
                 saveSettings({
-                    enabled: modal.querySelector(`#${SCRIPT.id}-enabled`).checked,
-                    undercutAmount: Math.max(0, Number(modal.querySelector(`#${SCRIPT.id}-undercut`).value) || 0),
-                    minimumPrice: Math.max(1, Number(modal.querySelector(`#${SCRIPT.id}-minimum`).value) || 1),
-                    ignoreBelowMarketValue: modal.querySelector(`#${SCRIPT.id}-ignore-market`).checked
+                    undercutAmount: Math.max(0, Number(modal.querySelector(`#${SCRIPT.id}-undercut`).value) || 0)
                 });
                 closeModal();
             }
@@ -448,10 +433,7 @@
                     </div>
                     <div class="${SCRIPT.id}-picker-list">
                         ${listings.map((listing, index) => {
-                            let suggested = Math.max(settings.minimumPrice, Number(listing.price) - settings.undercutAmount);
-                            if (settings.ignoreBelowMarketValue && marketValue && suggested < marketValue) {
-                                suggested = Math.max(settings.minimumPrice, marketValue);
-                            }
+                            const suggested = Math.max(0, Number(listing.price) - settings.undercutAmount);
                             const seller = listing.seller || 'Unknown seller';
                             const metaBits = [
                                 listing.bazaar ? `Bazaar: ${listing.bazaar}` : null,
@@ -484,10 +466,7 @@
             const selected = listings[Number(pickButton.dataset.index)];
             if (!selected) return;
 
-            let nextPrice = Math.max(settings.minimumPrice, Number(selected.price) - settings.undercutAmount);
-            if (settings.ignoreBelowMarketValue && marketValue && nextPrice < marketValue) {
-                nextPrice = Math.max(settings.minimumPrice, marketValue);
-            }
+            const nextPrice = Math.max(0, Number(selected.price) - settings.undercutAmount);
 
             setReactInputValue(input, nextPrice);
             closeModal();
@@ -495,8 +474,7 @@
     }
 
     async function openPickerForRow(li, button) {
-        const settings = loadSettings();
-        if (!settings.enabled) return;
+        loadSettings();
 
         const itemId = parseItemId(li);
         const itemName = parseItemName(li);
@@ -552,8 +530,12 @@
         if (!wrapper) {
             wrapper = document.createElement('div');
             wrapper.className = `${SCRIPT.id}-input-group`;
+            wrapper.style.display = 'inline-flex';
 
             const priceInput = input;
+            priceInput.style.width = '45px';
+            priceInput.style.minWidth = '45px';
+            priceInput.style.maxWidth = '45px';
             wrapper.appendChild(priceInput);
 
             const button = createPickerButton();
@@ -561,18 +543,19 @@
             group.insertBefore(wrapper, group.querySelector('input[type="hidden"]'));
 
             button.addEventListener('click', () => openPickerForRow(li, button));
+        } else {
+            const priceInput = wrapper.querySelector('input.input-money[type="text"]');
+            if (priceInput) {
+                priceInput.style.width = '45px';
+                priceInput.style.minWidth = '45px';
+                priceInput.style.maxWidth = '45px';
+            }
         }
     }
 
     function scanBazaarRows() {
-        const settings = loadSettings();
         const rows = document.querySelectorAll('.items-cont li.clearfix.no-mods[data-group="child"]');
         rows.forEach((li) => {
-            const wrapper = li.querySelector(`.${SCRIPT.id}-input-group`);
-            if (wrapper) {
-                wrapper.style.display = settings.enabled ? 'inline-flex' : 'none';
-            }
-            if (!settings.enabled) return;
             enhanceBazaarRow(li);
         });
     }
