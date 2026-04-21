@@ -63,13 +63,24 @@
             },
             _createSection(s) {
                 const sec = document.createElement('div'); sec.style.cssText = 'border-bottom:1px solid ' + STYLES.border;
-                const h = document.createElement('div'); h.style.cssText = `padding:10px 16px;background:${STYLES.panel};font-weight:bold;font-size:13px;`; h.textContent = s.name; sec.appendChild(h);
+                const h = document.createElement('div'); h.style.cssText = `padding:10px 16px;background:${STYLES.panel};font-weight:bold;font-size:13px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;`; h.innerHTML = `<span>${s.name}</span><span style="color:${STYLES.textMuted};font-size:12px;">▾</span>`; sec.appendChild(h);
                 const b = document.createElement('div'); b.style.cssText = 'padding:12px 16px;';
+                let collapsed = false;
+                h.addEventListener('click', () => {
+                    collapsed = !collapsed;
+                    b.style.display = collapsed ? 'none' : 'block';
+                    h.lastChild.textContent = collapsed ? '▸' : '▾';
+                });
                 if (s.config.fields) s.config.fields.forEach(f => {
                     const row = document.createElement('div'); row.style.cssText = 'margin-bottom:12px;';
                     const lbl = document.createElement('label'); lbl.style.cssText = `display:block;color:${STYLES.textMuted};font-size:11px;margin-bottom:4px;text-transform:uppercase;`; lbl.textContent = f.label; row.appendChild(lbl);
                     if (f.type === 'number') {
                         const inp = document.createElement('input'); inp.type = 'number'; inp.value = this.getSetting(s.id, f.key, f.default); inp.style.cssText = `width:100%;padding:8px 12px;background:${STYLES.bg};border:1px solid ${STYLES.border};border-radius:4px;color:${STYLES.text};font-size:13px;box-sizing:border-box;`; inp.addEventListener('change', () => this.setSetting(s.id, f.key, parseFloat(inp.value))); row.appendChild(inp);
+                    } else if (f.type === 'toggle') {
+                        const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;align-items:center;gap:8px;';
+                        const inp = document.createElement('input'); inp.type = 'checkbox'; inp.checked = this.getSetting(s.id, f.key, f.default); inp.addEventListener('change', () => this.setSetting(s.id, f.key, inp.checked)); wrap.appendChild(inp);
+                        const span = document.createElement('span'); span.style.cssText = `color:${STYLES.text};font-size:13px;`; span.textContent = inp.checked ? 'On' : 'Off'; inp.addEventListener('change', () => span.textContent = inp.checked ? 'On' : 'Off'); wrap.appendChild(span);
+                        row.appendChild(wrap);
                     }
                     b.appendChild(row);
                 });
@@ -82,7 +93,7 @@
     const SCRIPT = {
         id: 'bazaar-pricer-pda',
         name: 'Bazaar Pricer (PDA)',
-        version: '1.0.0'
+        version: '1.0.1'
     };
 
     const CONFIG = {
