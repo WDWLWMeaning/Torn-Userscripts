@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Bazaar Pricer
 // @namespace    torn-bazaar-pricer
-// @version      0.1.1
+// @version      0.2.0
 // @description  Add Weav3r-powered quick pricing buttons to Torn bazaar item listings with configurable undercutting.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -23,7 +23,7 @@
     const SCRIPT = {
         id: 'torn-bazaar-pricer',
         name: 'Torn Bazaar Pricer',
-        version: '0.1.1'
+        version: '0.2.0'
     };
 
     const CONFIG = {
@@ -249,31 +249,39 @@
                 border-color: ${TORN.green};
             }
 
-            .${SCRIPT.id}-toolbar {
-                margin-top: 6px;
+            .${SCRIPT.id}-cell {
+                width: 92px;
+                min-width: 92px;
+                padding: 8px 6px;
+                box-sizing: border-box;
+                border-left: 1px solid rgba(255,255,255,0.06);
                 display: flex;
-                align-items: center;
-                justify-content: flex-end;
-                gap: 6px;
-                flex-wrap: wrap;
+                flex-direction: column;
+                align-items: stretch;
+                justify-content: center;
+                gap: 5px;
+            }
+
+            .${SCRIPT.id}-toolbar {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 5px;
             }
 
             .${SCRIPT.id}-quick-btn {
-                padding: 3px 7px;
+                padding: 4px 6px;
                 font-size: 10px;
                 min-height: 22px;
                 line-height: 1.1;
             }
 
             .${SCRIPT.id}-status {
-                flex-basis: 100%;
-                text-align: right;
-                font-size: 10px;
-                line-height: 1.3;
+                text-align: center;
+                font-size: 9px;
+                line-height: 1.25;
                 color: ${TORN.textMuted};
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
+                word-break: break-word;
             }
 
             .${SCRIPT.id}-status.error {
@@ -526,6 +534,20 @@
         });
     }
 
+    function getActionsWrap(li) {
+        return li.querySelector('.actions-main-wrap');
+    }
+
+    function ensureActionLayout(li) {
+        const actionsWrap = getActionsWrap(li);
+        if (!actionsWrap) return null;
+        actionsWrap.style.display = 'grid';
+        actionsWrap.style.gridTemplateColumns = '1fr 92px';
+        actionsWrap.style.alignItems = 'stretch';
+        actionsWrap.style.columnGap = '0';
+        return actionsWrap;
+    }
+
     async function handlePriceLookup(li, toolbar, quickButton, statusEl) {
         const settings = loadSettings();
         if (!settings.enabled) {
@@ -590,8 +612,14 @@
 
         li.dataset.bazaarPricerBound = '1';
 
-        const priceContainer = input.closest('.price');
-        if (!priceContainer) return;
+        const actionsWrap = ensureActionLayout(li);
+        if (!actionsWrap) return;
+
+        const existingCell = li.querySelector(`.${SCRIPT.id}-cell`);
+        if (existingCell) existingCell.remove();
+
+        const cell = document.createElement('div');
+        cell.className = `${SCRIPT.id}-cell`;
 
         const toolbar = document.createElement('div');
         toolbar.className = `${SCRIPT.id}-toolbar`;
@@ -601,7 +629,8 @@
             <span class="${SCRIPT.id}-status"></span>
         `;
 
-        priceContainer.appendChild(toolbar);
+        cell.appendChild(toolbar);
+        actionsWrap.appendChild(cell);
 
         const quickButton = toolbar.querySelector(`.${SCRIPT.id}-quick-btn`);
         const statusEl = toolbar.querySelector(`.${SCRIPT.id}-status`);
@@ -613,14 +642,14 @@
         const rows = document.querySelectorAll('.items-cont li.clearfix.no-mods[data-group="child"]');
         rows.forEach((li) => {
             if (!settings.enabled) {
-                const toolbar = li.querySelector(`.${SCRIPT.id}-toolbar`);
-                if (toolbar) toolbar.style.display = 'none';
+                const cell = li.querySelector(`.${SCRIPT.id}-cell`);
+                if (cell) cell.style.display = 'none';
                 return;
             }
 
             enhanceBazaarRow(li);
-            const toolbar = li.querySelector(`.${SCRIPT.id}-toolbar`);
-            if (toolbar) toolbar.style.display = '';
+            const cell = li.querySelector(`.${SCRIPT.id}-cell`);
+            if (cell) cell.style.display = '';
         });
     }
 
