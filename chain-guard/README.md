@@ -2,7 +2,7 @@
 
 > Prevent accidental attacks when you're close to a chain bonus threshold in TORN City.
 
-[![Version](https://img.shields.io/badge/version-1.6.0-blue)](https://git.er-ic.ca/Kevin/torn-userscripts)
+[![Version](https://img.shields.io/badge/version-2.0.7-blue)](https://git.er-ic.ca/Kevin/torn-userscripts)
 [![Tampermonkey](https://img.shields.io/badge/Tampermonkey-Compatible-green)](https://www.tampermonkey.net/)
 [![Torn PDA](https://img.shields.io/badge/Torn%20PDA-Compatible-purple)](https://github.com/Manuito83/torn-pda)
 
@@ -49,6 +49,9 @@ Chain Guard protects your faction's chain bonus by preventing accidental attacks
 
 ## How to Use
 
+On Torn PDA, Chain Guard uses the shared unified **⚙️ PDA Scripts** settings menu. Its section is collapsible and defaults to collapsed.
+
+
 ### Changing the Warning Distance
 
 1. Click the **⚙️ settings button** in the Torn header (PDA) or use the Tampermonkey menu
@@ -93,6 +96,10 @@ The script knows all TORN chain bonus levels:
 - Tampermonkey: Check the Tampermonkey menu for "Chain Guard Settings"
 
 ## Changelog
+
+### v2.0.7
+- PDA settings now live in the unified shared PDA Scripts menu
+- PDA menu sections are collapsible and default to collapsed
 
 ### v1.6.0
 - Reorganized for script-first folder structure

@@ -103,7 +103,7 @@ Each Tampermonkey script has a corresponding `.meta.js` file containing only the
 
 ---
 
-### Mission Tracker `v5.1.1`
+### Mission Tracker `v5.1.2`
 
 Track your missions with native Torn styling. Available for both Tampermonkey and Torn PDA.
 
@@ -129,7 +129,7 @@ See also: [mission-tracker/README.md](mission-tracker/README.md)
 
 ---
 
-### Bazaar Pricer `v1.0.1`
+### Bazaar Pricer `v1.0.4`
 
 Inline bazaar listing picker for Torn bazaar pricing, powered by Weav3r marketplace data.
 
@@ -137,7 +137,7 @@ Inline bazaar listing picker for Torn bazaar pricing, powered by Weav3r marketpl
 - Shop icon button inline beside the price input
 - Opens a picker with current public bazaar listings
 - Applies selected listing price minus your configured undercut
-- Optional floor protection against dropping below shown Torn market value
+- Works on both legacy bazaar rows and newer React item cards
 - Lightweight UI that stays out of Torn's layout
 
 **Tampermonkey Install:**
@@ -159,10 +159,11 @@ See also: [bazaar-pricer/README.md](bazaar-pricer/README.md)
 A starter template for building your own Torn extensions with PDA + Tampermonkey support.
 
 **Includes:**
-- Shared PDA settings menu (draggable button, multiple scripts)
+- Shared PDA settings menu with one unified gear button across PDA scripts
+- Collapsible PDA settings sections that default to collapsed
 - PDA API key auto-detection (`###PDA-APIKEY###`)
 - Tampermonkey-compatible structure
-- Number and toggle setting types
+- Number, text, toggle, and select setting types
 - Smart caching helpers
 - Torn API v2 request helper
 
@@ -217,6 +218,8 @@ See [Torn PDA Userscripts](https://github.com/Manuito83/torn-pda/tree/master/use
 4. Tap "Manage Scripts" → "+" to add
 5. Paste the script code
 6. Set injection time (Start/End) as needed
+
+When multiple PDA scripts are installed, they share a single unified **⚙️ PDA Scripts** settings button. Each script gets its own collapsible section inside that shared menu.
 
 ---
 

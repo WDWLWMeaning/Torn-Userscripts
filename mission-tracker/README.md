@@ -2,7 +2,7 @@
 
 > Track your TORN missions with native Torn styling and urgency indicators.
 
-[![Version](https://img.shields.io/badge/version-5.1.1-blue)](https://git.er-ic.ca/Kevin/torn-userscripts)
+[![Version](https://img.shields.io/badge/version-5.1.2-blue)](https://git.er-ic.ca/Kevin/torn-userscripts)
 [![Tampermonkey](https://img.shields.io/badge/Tampermonkey-Compatible-green)](https://www.tampermonkey.net/)
 [![Torn PDA](https://img.shields.io/badge/Torn%20PDA-Compatible-purple)](https://github.com/Manuito83/torn-pda)
 
@@ -55,6 +55,9 @@ Mission Tracker adds a visual badge to the **Missions** button in TORN, showing 
 
 ## Features
 
+On Torn PDA, Mission Tracker uses the shared unified **⚙️ PDA Scripts** settings menu. Its section is collapsible and defaults to collapsed.
+
+
 ### Smart Caching
 - Updates every **5 minutes** to avoid spamming TORN's API
 - Caches mission data locally so it works across page navigation
@@ -98,6 +101,10 @@ Mission Tracker adds a visual badge to the **Missions** button in TORN, showing 
 - Automatic refresh on page load
 
 ## Changelog
+
+### v5.1.2
+- PDA settings now use the unified shared PDA Scripts menu behavior
+- PDA menu sections are collapsible and default to collapsed
 
 ### v5.1.1
 - Added Torn PDA support with shared menu integration

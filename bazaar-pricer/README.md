@@ -35,7 +35,10 @@ https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/bazaar-pricer/pda/bazaar-pr
 Current setting:
 - Undercut amount
 
+On Torn PDA, Bazaar Pricer uses the shared unified **⚙️ PDA Scripts** settings menu. Its section is collapsible and now defaults to collapsed.
+
 ## Notes
 
 - Weav3r responses are cached briefly to avoid hammering the endpoint
+- The PDA version shares one unified settings button with other PDA scripts instead of adding its own separate settings UI
 - If Torn changes its bazaar markup again, the selector logic may need another update
