@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Torn Bazaar Pricer
 // @namespace    torn-bazaar-pricer
-// @version      0.4.1
-// @description  Add Weav3r-powered quick pricing buttons to Torn bazaar item listings with configurable undercutting.
+// @version      1.0.0
+// @description  Add a Weav3r-powered listing picker button beside Torn bazaar price inputs.
 // @author       Kevin
 // @match        https://www.torn.com/*
 // @grant        GM_xmlhttpRequest
@@ -23,7 +23,7 @@
     const SCRIPT = {
         id: 'torn-bazaar-pricer',
         name: 'Torn Bazaar Pricer',
-        version: '0.4.1'
+        version: '1.0.0'
     };
 
     const CONFIG = {
@@ -43,25 +43,11 @@
         headerGradient: 'linear-gradient(180deg, #777 0%, #333 100%)'
     };
 
-    const LAYOUT_PRESETS = [
-        { id: 'v1', label: '1', top: 14, right: 118, width: 178, direction: 'row' },
-        { id: 'v2', label: '2', top: 14, right: 118, width: 152, direction: 'column' },
-        { id: 'v3', label: '3', top: 14, right: 96, width: 140, direction: 'row' },
-        { id: 'v4', label: '4', top: 42, right: 118, width: 178, direction: 'row' },
-        { id: 'v5', label: '5', top: 42, right: 96, width: 140, direction: 'column' },
-        { id: 'v6', label: '6', top: 12, right: 210, width: 130, direction: 'row' },
-        { id: 'v7', label: '7', top: 40, right: 210, width: 130, direction: 'row' },
-        { id: 'v8', label: '8', top: 14, right: 150, width: 110, direction: 'column' },
-        { id: 'v9', label: '9', top: 56, right: 118, width: 178, direction: 'row' },
-        { id: 'v10', label: '10', top: 56, right: 150, width: 120, direction: 'column' }
-    ];
-
     const DEFAULT_SETTINGS = {
         enabled: true,
         undercutAmount: 1,
         minimumPrice: 1,
-        ignoreBelowMarketValue: false,
-        selectedLayoutId: 'v1'
+        ignoreBelowMarketValue: false
     };
 
     let observer = null;
@@ -87,11 +73,6 @@
 
     function saveSettings(settings) {
         Storage.set(`${SCRIPT.id}:settings`, settings);
-    }
-
-    function getSelectedPreset() {
-        const settings = loadSettings();
-        return LAYOUT_PRESETS.find((preset) => preset.id === settings.selectedLayoutId) || LAYOUT_PRESETS[0];
     }
 
     function buildWeav3rUrl(path, query = {}) {
@@ -203,8 +184,7 @@
                 margin-bottom: 6px;
             }
 
-            #${SCRIPT.id}-modal .bp-field input[type="number"],
-            #${SCRIPT.id}-modal .bp-field select {
+            #${SCRIPT.id}-modal .bp-field input[type="number"] {
                 width: 100%;
                 box-sizing: border-box;
                 padding: 8px 10px;
@@ -222,8 +202,7 @@
                 font-size: 12px;
             }
 
-            #${SCRIPT.id}-modal .bp-actions,
-            #${SCRIPT.id}-modal .bp-layout-actions {
+            #${SCRIPT.id}-modal .bp-actions {
                 margin-top: 18px;
                 display: flex;
                 gap: 10px;
@@ -231,7 +210,7 @@
             }
 
             #${SCRIPT.id}-modal .bp-btn,
-            .${SCRIPT.id}-quick-btn,
+            .${SCRIPT.id}-picker-btn,
             .${SCRIPT.id}-pick-btn {
                 border: 1px solid #111;
                 border-radius: 3px;
@@ -244,97 +223,54 @@
             }
 
             #${SCRIPT.id}-modal .bp-btn:hover,
-            .${SCRIPT.id}-quick-btn:hover,
+            .${SCRIPT.id}-picker-btn:hover,
             .${SCRIPT.id}-pick-btn:hover {
                 background: linear-gradient(180deg, #333 0%, #777 25%, #555 59%, #666 78%, #333 100%);
                 color: #fff;
             }
 
-            #${SCRIPT.id}-modal .bp-btn { padding: 9px 14px; }
+            #${SCRIPT.id}-modal .bp-btn {
+                padding: 9px 14px;
+            }
+
             #${SCRIPT.id}-modal .bp-btn-primary,
-            .${SCRIPT.id}-quick-btn,
-            .${SCRIPT.id}-pick-btn { border-color: ${TORN.green}; }
-
-            #${SCRIPT.id}-modal .bp-layout-note {
-                margin-top: 8px;
-                font-size: 11px;
-                color: ${TORN.textMuted};
+            .${SCRIPT.id}-picker-btn,
+            .${SCRIPT.id}-pick-btn {
+                border-color: ${TORN.green};
             }
 
-            li.clearfix.no-mods[data-group="child"] {
-                position: relative;
-                min-height: 86px;
-            }
-
-            .${SCRIPT.id}-cell {
-                position: absolute;
-                display: flex;
-                flex-direction: column;
-                align-items: stretch;
-                justify-content: center;
-                gap: 4px;
-                z-index: 5;
-            }
-
-            .${SCRIPT.id}-cell[data-layout-direction="row"] .${SCRIPT.id}-toolbar {
-                display: flex;
-                flex-direction: row;
+            .${SCRIPT.id}-input-group {
+                display: inline-flex;
                 align-items: center;
-                justify-content: flex-end;
-                gap: 6px;
-                width: 100%;
+                gap: 4px;
             }
 
-            .${SCRIPT.id}-cell[data-layout-direction="column"] .${SCRIPT.id}-toolbar {
-                display: flex;
-                flex-direction: column;
-                align-items: stretch;
-                gap: 5px;
-                width: 100%;
+            .${SCRIPT.id}-picker-btn {
+                width: 28px;
+                height: 22px;
+                padding: 0;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                box-sizing: border-box;
+                vertical-align: middle;
+                flex: 0 0 28px;
             }
 
-            .${SCRIPT.id}-quick-btn {
-                flex: 1 1 0;
-                padding: 4px 6px;
-                font-size: 10px;
-                min-height: 22px;
-                line-height: 1.1;
+            .${SCRIPT.id}-picker-btn svg {
+                display: block;
+                width: 14px;
+                height: 14px;
+                pointer-events: none;
             }
 
-            .${SCRIPT.id}-status {
-                text-align: right;
-                font-size: 9px;
-                line-height: 1.25;
-                color: ${TORN.textMuted};
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
+            .${SCRIPT.id}-picker-btn.loading {
+                opacity: 0.7;
             }
 
-            .${SCRIPT.id}-cell[data-layout-direction="column"] .${SCRIPT.id}-status {
-                text-align: center;
-                white-space: normal;
+            .${SCRIPT.id}-picker-btn.error {
+                border-color: ${TORN.red};
             }
-
-            .${SCRIPT.id}-badge {
-                position: absolute;
-                top: -8px;
-                left: -8px;
-                min-width: 18px;
-                height: 18px;
-                padding: 0 4px;
-                border-radius: 999px;
-                background: ${TORN.red};
-                color: #fff;
-                font-size: 10px;
-                line-height: 18px;
-                text-align: center;
-                font-weight: bold;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.4);
-            }
-
-            .${SCRIPT.id}-status.error { color: ${TORN.red}; }
-            .${SCRIPT.id}-status.success { color: ${TORN.green}; }
 
             .${SCRIPT.id}-picker-list {
                 display: flex;
@@ -406,6 +342,10 @@
         return match ? Number(match[1].replace(/,/g, '')) : null;
     }
 
+    function getVisiblePriceInput(li) {
+        return li.querySelector('.input-money-group input.input-money[type="text"]');
+    }
+
     function setReactInputValue(input, value) {
         const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
         nativeSetter?.call(input, String(value));
@@ -414,9 +354,9 @@
         input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }));
     }
 
-    function choosePrice(listings, settings, marketValue) {
-        if (!Array.isArray(listings) || !listings.length) return null;
-        const usable = listings
+    function chooseListings(listings) {
+        if (!Array.isArray(listings) || !listings.length) return [];
+        return listings
             .map((listing) => ({
                 price: Number(listing.price || listing.cost || 0),
                 quantity: Number(listing.quantity || listing.amount || 0),
@@ -425,14 +365,6 @@
             }))
             .filter((listing) => listing.price > 0)
             .sort((a, b) => a.price - b.price);
-
-        if (!usable.length) return null;
-        const target = usable[0];
-        let price = Math.max(settings.minimumPrice, target.price - settings.undercutAmount);
-        if (settings.ignoreBelowMarketValue && marketValue && price < marketValue) {
-            price = Math.max(settings.minimumPrice, marketValue);
-        }
-        return { source: target, value: price, listings: usable };
     }
 
     function closeModal() {
@@ -443,7 +375,6 @@
         injectStyles();
         closeModal();
         const settings = loadSettings();
-        const currentPreset = getSelectedPreset();
         const modal = document.createElement('div');
         modal.id = `${SCRIPT.id}-modal`;
         modal.innerHTML = `
@@ -453,19 +384,6 @@
                     <button class="bp-close" type="button">×</button>
                 </div>
                 <div class="bp-body">
-                    <div class="bp-field">
-                        <label>Layout preview</label>
-                        <select id="${SCRIPT.id}-layout">
-                            ${LAYOUT_PRESETS.map((preset) => `<option value="${preset.id}" ${preset.id === settings.selectedLayoutId ? 'selected' : ''}>Layout ${preset.label}</option>`).join('')}
-                        </select>
-                        <div class="bp-layout-actions">
-                            <button class="bp-btn" type="button" data-layout-nav="prev">Previous</button>
-                            <button class="bp-btn" type="button" data-layout-nav="next">Next</button>
-                        </div>
-                        <div class="bp-layout-note">
-                            Currently previewing layout ${currentPreset.label}. Change it here and save to update the bazaar rows.
-                        </div>
-                    </div>
                     <div class="bp-field">
                         <label>Undercut amount</label>
                         <input type="number" id="${SCRIPT.id}-undercut" min="0" step="1" value="${settings.undercutAmount}">
@@ -491,36 +409,24 @@
         `;
         document.body.appendChild(modal);
 
-        const layoutSelect = modal.querySelector(`#${SCRIPT.id}-layout`);
         modal.addEventListener('click', (event) => {
             if (event.target === modal || event.target.closest('.bp-close') || event.target.dataset.action === 'cancel') {
                 closeModal();
                 return;
             }
-
-            if (event.target.dataset.layoutNav) {
-                const currentIndex = LAYOUT_PRESETS.findIndex((preset) => preset.id === layoutSelect.value);
-                const direction = event.target.dataset.layoutNav === 'next' ? 1 : -1;
-                const nextIndex = (currentIndex + direction + LAYOUT_PRESETS.length) % LAYOUT_PRESETS.length;
-                layoutSelect.value = LAYOUT_PRESETS[nextIndex].id;
-                return;
-            }
-
             if (event.target.dataset.action === 'save') {
                 saveSettings({
                     enabled: modal.querySelector(`#${SCRIPT.id}-enabled`).checked,
                     undercutAmount: Math.max(0, Number(modal.querySelector(`#${SCRIPT.id}-undercut`).value) || 0),
                     minimumPrice: Math.max(1, Number(modal.querySelector(`#${SCRIPT.id}-minimum`).value) || 1),
-                    ignoreBelowMarketValue: modal.querySelector(`#${SCRIPT.id}-ignore-market`).checked,
-                    selectedLayoutId: layoutSelect.value
+                    ignoreBelowMarketValue: modal.querySelector(`#${SCRIPT.id}-ignore-market`).checked
                 });
                 closeModal();
-                scanBazaarRows();
             }
         });
     }
 
-    function openPicker({ itemId, itemName, listings, input, statusEl, marketValue }) {
+    function openPicker({ itemId, itemName, listings, input, marketValue }) {
         injectStyles();
         closeModal();
         const settings = loadSettings();
@@ -538,7 +444,10 @@
                     </div>
                     <div class="${SCRIPT.id}-picker-list">
                         ${listings.map((listing, index) => {
-                            const suggested = Math.max(settings.minimumPrice, Number(listing.price) - settings.undercutAmount);
+                            let suggested = Math.max(settings.minimumPrice, Number(listing.price) - settings.undercutAmount);
+                            if (settings.ignoreBelowMarketValue && marketValue && suggested < marketValue) {
+                                suggested = Math.max(settings.minimumPrice, marketValue);
+                            }
                             const seller = listing.seller || 'Unknown seller';
                             const metaBits = [
                                 listing.bazaar ? `Bazaar: ${listing.bazaar}` : null,
@@ -570,129 +479,95 @@
             if (!pickButton) return;
             const selected = listings[Number(pickButton.dataset.index)];
             if (!selected) return;
+
             let nextPrice = Math.max(settings.minimumPrice, Number(selected.price) - settings.undercutAmount);
             if (settings.ignoreBelowMarketValue && marketValue && nextPrice < marketValue) {
                 nextPrice = Math.max(settings.minimumPrice, marketValue);
             }
+
             setReactInputValue(input, nextPrice);
-            if (statusEl) {
-                statusEl.textContent = `Set to ${formatMoney(nextPrice)} from ${selected.seller || 'selected listing'}`;
-                statusEl.className = `${SCRIPT.id}-status success`;
-            }
             closeModal();
         });
     }
 
-    async function fetchListingContext(li, statusEl, loadingMessage = 'Loading current bazaar prices...') {
+    async function openPickerForRow(li, button) {
         const settings = loadSettings();
-        if (!settings.enabled) {
-            statusEl.textContent = 'Script disabled in settings';
-            statusEl.className = `${SCRIPT.id}-status error`;
-            return null;
-        }
+        if (!settings.enabled) return;
+
         const itemId = parseItemId(li);
         const itemName = parseItemName(li);
         const input = getPriceInput(li);
         const marketValue = getMarketValue(li);
+
         if (!itemId || !input) {
-            statusEl.textContent = 'Could not detect item or price input';
-            statusEl.className = `${SCRIPT.id}-status error`;
-            return null;
+            button.classList.add('error');
+            return;
         }
-        statusEl.textContent = loadingMessage;
-        statusEl.className = `${SCRIPT.id}-status`;
+
+        button.disabled = true;
+        button.classList.remove('error');
+        button.classList.add('loading');
+
         try {
             const data = await getMarketplaceItem(itemId);
-            const result = choosePrice(data.listings, settings, marketValue);
-            if (!result) {
-                statusEl.textContent = 'No usable listings returned by Weav3r';
-                statusEl.className = `${SCRIPT.id}-status error`;
-                return null;
+            const listings = chooseListings(data.listings);
+            if (!listings.length) {
+                button.classList.add('error');
+                return;
             }
-            return { itemId, itemName, input, marketValue, result };
+            openPicker({ itemId, itemName, listings, input, marketValue });
         } catch (error) {
             console.error(`[${SCRIPT.name}]`, error);
-            statusEl.textContent = `Pricing lookup failed: ${error.message}`;
-            statusEl.className = `${SCRIPT.id}-status error`;
-            return null;
-        }
-    }
-
-    async function handlePriceLookup(li, toolbar, quickButton, statusEl) {
-        quickButton.disabled = true;
-        try {
-            const context = await fetchListingContext(li, statusEl);
-            if (!context) return;
-            setReactInputValue(context.input, context.result.value);
-            statusEl.textContent = `Set ${formatMoney(context.result.value)} from ${context.result.source.seller || 'lowest listing'} (${formatMoney(context.result.source.price)})`;
-            statusEl.className = `${SCRIPT.id}-status success`;
-            const pickerButton = toolbar.querySelector(`.${SCRIPT.id}-picker-open`);
-            if (pickerButton) pickerButton.disabled = false;
+            button.classList.add('error');
         } finally {
-            quickButton.disabled = false;
+            button.disabled = false;
+            button.classList.remove('loading');
         }
     }
 
-    function createControlCell(li, preset) {
-        const cell = document.createElement('div');
-        cell.className = `${SCRIPT.id}-cell`;
-        cell.dataset.layoutId = preset.id;
-        cell.dataset.layoutDirection = preset.direction;
-        cell.style.top = `${preset.top}px`;
-        cell.style.right = `${preset.right}px`;
-        cell.style.width = `${preset.width}px`;
-        cell.innerHTML = `
-            <span class="${SCRIPT.id}-badge">${preset.label}</span>
-            <div class="${SCRIPT.id}-toolbar">
-                <button type="button" class="${SCRIPT.id}-quick-btn">Bazaar</button>
-                <button type="button" class="${SCRIPT.id}-quick-btn ${SCRIPT.id}-picker-open">Pick</button>
-            </div>
-            <span class="${SCRIPT.id}-status"></span>
+    function createPickerButton() {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `${SCRIPT.id}-picker-btn`;
+        button.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M4 7h16l-1.2 11.1a2 2 0 0 1-2 1.9H7.2a2 2 0 0 1-2-1.9L4 7zm3-3a5 5 0 0 1 10 0h-2a3 3 0 0 0-6 0H7z" />
+            </svg>
         `;
-
-        const toolbar = cell.querySelector(`.${SCRIPT.id}-toolbar`);
-        const quickButton = toolbar.querySelector(`.${SCRIPT.id}-quick-btn`);
-        const pickerButton = toolbar.querySelector(`.${SCRIPT.id}-picker-open`);
-        const statusEl = cell.querySelector(`.${SCRIPT.id}-status`);
-
-        quickButton.addEventListener('click', () => handlePriceLookup(li, toolbar, quickButton, statusEl));
-        pickerButton.addEventListener('click', async () => {
-            pickerButton.disabled = true;
-            try {
-                const context = await fetchListingContext(li, statusEl, 'Loading listings...');
-                if (!context) return;
-                openPicker({
-                    itemId: context.itemId,
-                    itemName: context.itemName,
-                    listings: context.result.listings,
-                    input: context.input,
-                    statusEl,
-                    marketValue: context.marketValue
-                });
-                statusEl.textContent = `Loaded ${context.result.listings.length} listings`;
-                statusEl.className = `${SCRIPT.id}-status success`;
-            } finally {
-                pickerButton.disabled = false;
-            }
-        });
-
-        return cell;
+        return button;
     }
 
     function enhanceBazaarRow(li) {
-        const input = getPriceInput(li);
+        const input = getVisiblePriceInput(li);
         if (!input) return;
-        li.querySelectorAll(`.${SCRIPT.id}-cell`).forEach((node) => node.remove());
-        li.appendChild(createControlCell(li, getSelectedPreset()));
+
+        const group = input.closest('.input-money-group');
+        if (!group) return;
+
+        let wrapper = group.querySelector(`.${SCRIPT.id}-input-group`);
+        if (!wrapper) {
+            wrapper = document.createElement('div');
+            wrapper.className = `${SCRIPT.id}-input-group`;
+
+            const priceInput = input;
+            wrapper.appendChild(priceInput);
+
+            const button = createPickerButton();
+            wrapper.appendChild(button);
+            group.insertBefore(wrapper, group.querySelector('input[type="hidden"]'));
+
+            button.addEventListener('click', () => openPickerForRow(li, button));
+        }
     }
 
     function scanBazaarRows() {
         const settings = loadSettings();
         const rows = document.querySelectorAll('.items-cont li.clearfix.no-mods[data-group="child"]');
         rows.forEach((li) => {
-            li.querySelectorAll(`.${SCRIPT.id}-cell`).forEach((cell) => {
-                cell.style.display = settings.enabled ? '' : 'none';
-            });
+            const wrapper = li.querySelector(`.${SCRIPT.id}-input-group`);
+            if (wrapper) {
+                wrapper.style.display = settings.enabled ? 'inline-flex' : 'none';
+            }
             if (!settings.enabled) return;
             enhanceBazaarRow(li);
         });

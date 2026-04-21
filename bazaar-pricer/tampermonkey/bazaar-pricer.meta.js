@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Torn Bazaar Pricer
 // @namespace    torn-bazaar-pricer
-// @version      0.4.1
-// @description  Add Weav3r-powered quick pricing buttons to Torn bazaar item listings with configurable undercutting.
+// @version      1.0.0
+// @description  Add a Weav3r-powered listing picker button beside Torn bazaar price inputs.
 // @author       Kevin
 // @match        https://www.torn.com/*
 // @grant        GM_xmlhttpRequest
