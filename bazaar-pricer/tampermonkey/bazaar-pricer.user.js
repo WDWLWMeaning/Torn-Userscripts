@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Bazaar Pricer
 // @namespace    torn-bazaar-pricer
-// @version      0.3.1
+// @version      0.3.2
 // @description  Add Weav3r-powered quick pricing buttons to Torn bazaar item listings with configurable undercutting.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -23,7 +23,7 @@
     const SCRIPT = {
         id: 'torn-bazaar-pricer',
         name: 'Torn Bazaar Pricer',
-        version: '0.3.1'
+        version: '0.3.2'
     };
 
     const CONFIG = {
@@ -255,27 +255,29 @@
 
             .${SCRIPT.id}-cell {
                 position: absolute;
-                top: 12px;
-                right: 10px;
+                top: 14px;
+                right: 118px;
                 transform: none;
-                width: 84px;
+                width: 178px;
                 display: flex;
                 flex-direction: column;
                 align-items: stretch;
                 justify-content: center;
-                gap: 5px;
+                gap: 4px;
                 z-index: 5;
             }
 
             .${SCRIPT.id}-toolbar {
                 display: flex;
-                flex-direction: column;
-                align-items: stretch;
-                gap: 5px;
+                flex-direction: row;
+                align-items: center;
+                justify-content: flex-end;
+                gap: 6px;
                 width: 100%;
             }
 
             .${SCRIPT.id}-quick-btn {
+                flex: 1 1 0;
                 padding: 4px 6px;
                 font-size: 10px;
                 min-height: 22px;
@@ -283,11 +285,13 @@
             }
 
             .${SCRIPT.id}-status {
-                text-align: center;
+                text-align: right;
                 font-size: 9px;
                 line-height: 1.25;
                 color: ${TORN.textMuted};
-                word-break: break-word;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
 
             .${SCRIPT.id}-status.error {
