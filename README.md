@@ -1,5 +1,9 @@
 # Torn Userscripts
 
+<p align="center">
+  <img src="assets/torn-userscripts-logo.png" alt="Torn Userscripts logo" width="160">
+</p>
+
 > Browser extensions for [Torn City](https://www.torn.com) with enhanced gameplay, better UI, and API-powered features.
 
 [![Torn](https://img.shields.io/badge/Torn-API%20v2-blue)](https://www.torn.com/api.html)
@@ -122,6 +126,24 @@ https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/mission-tracker/pda/mission
 ```
 
 See also: [mission-tracker/README.md](mission-tracker/README.md)
+
+---
+
+### Bazaar Pricer `v1.0.1`
+
+Inline bazaar listing picker for Torn bazaar pricing, powered by Weav3r marketplace data.
+
+**Features:**
+- Shop icon button inline beside the price input
+- Opens a picker with current public bazaar listings
+- Applies selected listing price minus your configured undercut
+- Optional floor protection against dropping below shown Torn market value
+- Lightweight UI that stays out of Torn's layout
+
+**Tampermonkey Install:**
+```text
+https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/bazaar-pricer/tampermonkey/bazaar-pricer.user.js
+```
 
 ---
 
