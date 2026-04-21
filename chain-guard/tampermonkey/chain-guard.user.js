@@ -13,7 +13,7 @@
 // @grant        GM_addStyle
 // @updateURL    https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/chain-guard/tampermonkey/chain-guard.meta.js
 // @downloadURL  https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/chain-guard/tampermonkey/chain-guard.user.js
-// @icon         https://www.google.com/s2/favicons?sz=64&domain=torn.com
+// @icon         https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/assets/favicon_io/favicon-32x32.png
 // @run-at       document-start
 // ==/UserScript==
 

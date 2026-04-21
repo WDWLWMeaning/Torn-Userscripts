@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Bazaar Pricer
 // @namespace    torn-bazaar-pricer
-// @version      1.0.2
+// @version      1.0.3
 // @description  Add a Weav3r-powered listing picker button beside Torn bazaar price inputs.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -13,6 +13,6 @@
 // @grant        GM_addStyle
 // @updateURL    https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/bazaar-pricer/tampermonkey/bazaar-pricer.meta.js
 // @downloadURL  https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/bazaar-pricer/tampermonkey/bazaar-pricer.user.js
-// @icon         https://www.google.com/s2/favicons?sz=64&domain=torn.com
+// @icon         https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/assets/favicon_io/favicon-32x32.png
 // @run-at       document-end
 // ==/UserScript==
