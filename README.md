@@ -145,6 +145,13 @@ Inline bazaar listing picker for Torn bazaar pricing, powered by Weav3r marketpl
 https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/bazaar-pricer/tampermonkey/bazaar-pricer.user.js
 ```
 
+**Torn PDA Install:** Copy the script from:
+```text
+https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/bazaar-pricer/pda/bazaar-pricer.js
+```
+
+See also: [bazaar-pricer/README.md](bazaar-pricer/README.md)
+
 ---
 
 ### Boilerplate `v1.0.0`
