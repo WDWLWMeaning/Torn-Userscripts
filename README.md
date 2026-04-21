@@ -4,8 +4,9 @@
   <img src="assets/torn-userscripts-logo.png" alt="Torn Userscripts logo" width="160">
 </p>
 
-> Browser extensions for [Torn City](https://www.torn.com) with enhanced gameplay, better UI, and API-powered features.
+> A branded collection of Torn userscripts for Tampermonkey and Torn PDA, with shared UI patterns, unified PDA settings, and gameplay-focused quality of life improvements.
 
+[![GitLab](https://img.shields.io/badge/GitLab-Kevin%2Ftorn--userscripts-FC6D26?logo=gitlab&logoColor=white)](https://git.er-ic.ca/Kevin/torn-userscripts)
 [![Torn](https://img.shields.io/badge/Torn-API%20v2-blue)](https://www.torn.com/api.html)
 [![Tampermonkey](https://img.shields.io/badge/Tampermonkey-Compatible-green)](https://www.tampermonkey.net/)
 [![Torn PDA](https://img.shields.io/badge/Torn%20PDA-Compatible-purple)](https://github.com/Manuito83/torn-pda)
@@ -43,6 +44,16 @@ torn-userscripts/
 │   └── generate-meta.sh
 └── boilerplate.js (legacy, use shared/pda-boilerplate.js)
 ```
+
+---
+
+## Repo Highlights
+
+- Shared branding with repo logo and lobster favicon pack
+- Tampermonkey and Torn PDA variants where supported
+- Unified **⚙️ PDA Scripts** settings menu for PDA builds
+- Shared PDA boilerplate for new scripts
+- Public GitLab raw install URLs for direct installs
 
 ---
 
