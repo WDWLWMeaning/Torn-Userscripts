@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Bazaar Pricer (PDA)
 // @namespace    torn-bazaar-pricer-pda
-// @version      1.0.0
+// @version      1.0.2
 // @description  PDA companion for Bazaar Pricer with inline Weav3r listing picker beside bazaar price inputs.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -119,6 +119,7 @@
 
     let observer = null;
     let refreshTimer = null;
+    let menuWatchdog = null;
 
     function storageGet(key, fallback = null) {
         try {
@@ -538,7 +539,7 @@
     function registerWithSharedMenu() {
         if (!window.PDAScriptsMenu) {
             setTimeout(registerWithSharedMenu, 500);
-            return;
+            return false;
         }
         window.PDAScriptsMenu.register(SCRIPT.id, '🦞 Bazaar Pricer', {
             fields: [
@@ -553,11 +554,39 @@
                 saveSettings({ ...loadSettings(), [key]: value });
             }
         });
+        if (typeof window.PDAScriptsMenu._updateUI === 'function') {
+            window.PDAScriptsMenu._updateUI();
+        }
+        return true;
+    }
+
+    function ensureSharedMenuRegistration() {
+        const menu = window.PDAScriptsMenu;
+        if (!menu) {
+            registerWithSharedMenu();
+            return;
+        }
+
+        if (!menu._scripts || typeof menu._scripts.has !== 'function' || !menu._scripts.has(SCRIPT.id)) {
+            registerWithSharedMenu();
+            return;
+        }
+
+        if (!document.getElementById('pda-shared-settings-btn') && typeof menu._updateUI === 'function') {
+            menu._button = null;
+            menu._updateUI();
+        }
+    }
+
+    function startMenuWatchdog() {
+        if (menuWatchdog) clearInterval(menuWatchdog);
+        menuWatchdog = setInterval(ensureSharedMenuRegistration, 2000);
     }
 
     function init() {
         injectStyles();
         registerWithSharedMenu();
+        startMenuWatchdog();
         scanTargets();
         setupObserver();
         console.log(`[${SCRIPT.name}] v${SCRIPT.version} ready`);
