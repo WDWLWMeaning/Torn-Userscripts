@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Bazaar Pricer
 // @namespace    torn-bazaar-pricer
-// @version      0.2.3
+// @version      0.3.0
 // @description  Add Weav3r-powered quick pricing buttons to Torn bazaar item listings with configurable undercutting.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -23,7 +23,7 @@
     const SCRIPT = {
         id: 'torn-bazaar-pricer',
         name: 'Torn Bazaar Pricer',
-        version: '0.2.3'
+        version: '0.3.0'
     };
 
     const CONFIG = {
@@ -249,26 +249,23 @@
                 border-color: ${TORN.green};
             }
 
+            li.clearfix.no-mods[data-group="child"] {
+                position: relative;
+                padding-right: 106px;
+            }
+
             .${SCRIPT.id}-cell {
+                position: absolute;
+                top: 50%;
+                right: 10px;
+                transform: translateY(-50%);
                 width: 84px;
-                min-width: 84px;
-                margin-left: 8px;
                 display: flex;
                 flex-direction: column;
                 align-items: stretch;
-                justify-content: flex-start;
+                justify-content: center;
                 gap: 5px;
-                flex: 0 0 84px;
-            }
-
-            .${SCRIPT.id}-amount-wrap {
-                flex: 0 0 auto;
-                min-width: 168px;
-            }
-
-            .${SCRIPT.id}-info-wrap {
-                flex: 1 1 auto;
-                min-width: 0;
+                z-index: 2;
             }
 
             .${SCRIPT.id}-toolbar {
@@ -616,11 +613,7 @@
         if (!actionsWrap) return;
 
         const amountWrap = li.querySelector('.amount-main-wrap');
-        const infoWrap = li.querySelector('.info-main-wrap');
-        if (!amountWrap || !infoWrap) return;
-
-        amountWrap.classList.add(`${SCRIPT.id}-amount-wrap`);
-        infoWrap.classList.add(`${SCRIPT.id}-info-wrap`);
+        if (!amountWrap) return;
 
         const existingCell = li.querySelector(`.${SCRIPT.id}-cell`);
         if (existingCell) existingCell.remove();
@@ -638,14 +631,7 @@
 
         cell.appendChild(toolbar);
 
-        const parent = amountWrap.parentElement;
-        if (parent) {
-            parent.style.display = 'flex';
-            parent.style.flexWrap = 'nowrap';
-            parent.style.alignItems = 'flex-start';
-            parent.style.gap = '8px';
-            parent.insertBefore(cell, infoWrap);
-        }
+        li.appendChild(cell);
 
         const quickButton = toolbar.querySelector(`.${SCRIPT.id}-quick-btn`);
         const statusEl = toolbar.querySelector(`.${SCRIPT.id}-status`);
