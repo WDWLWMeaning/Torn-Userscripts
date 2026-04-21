@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Bazaar Pricer
 // @namespace    torn-bazaar-pricer
-// @version      0.3.2
+// @version      0.3.3
 // @description  Add Weav3r-powered quick pricing buttons to Torn bazaar item listings with configurable undercutting.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -23,7 +23,7 @@
     const SCRIPT = {
         id: 'torn-bazaar-pricer',
         name: 'Torn Bazaar Pricer',
-        version: '0.3.2'
+        version: '0.3.3'
     };
 
     const CONFIG = {
@@ -548,12 +548,12 @@
         return li.querySelector('.actions-main-wrap');
     }
 
-    async function handlePriceLookup(li, toolbar, quickButton, statusEl) {
+    async function fetchListingContext(li, statusEl, loadingMessage = 'Loading current bazaar prices...') {
         const settings = loadSettings();
         if (!settings.enabled) {
             statusEl.textContent = 'Script disabled in settings';
             statusEl.className = `${SCRIPT.id}-status error`;
-            return;
+            return null;
         }
 
         const itemId = parseItemId(li);
@@ -564,11 +564,10 @@
         if (!itemId || !input) {
             statusEl.textContent = 'Could not detect item or price input';
             statusEl.className = `${SCRIPT.id}-status error`;
-            return;
+            return null;
         }
 
-        quickButton.disabled = true;
-        statusEl.textContent = 'Loading current bazaar prices...';
+        statusEl.textContent = loadingMessage;
         statusEl.className = `${SCRIPT.id}-status`;
 
         try {
@@ -577,29 +576,39 @@
             if (!result) {
                 statusEl.textContent = 'No usable listings returned by Weav3r';
                 statusEl.className = `${SCRIPT.id}-status error`;
-                return;
+                return null;
             }
 
-            setReactInputValue(input, result.value);
-            statusEl.textContent = `Set ${formatMoney(result.value)} from ${result.source.seller || 'lowest listing'} (${formatMoney(result.source.price)})`;
-            statusEl.className = `${SCRIPT.id}-status success`;
-
-            const pickerButton = toolbar.querySelector(`.${SCRIPT.id}-picker-open`);
-            if (pickerButton) {
-                pickerButton.onclick = () => openPicker({
-                    itemId,
-                    itemName,
-                    listings: result.listings,
-                    input,
-                    statusEl,
-                    marketValue
-                });
-                pickerButton.disabled = false;
-            }
+            return {
+                itemId,
+                itemName,
+                input,
+                marketValue,
+                result
+            };
         } catch (error) {
             console.error(`[${SCRIPT.name}]`, error);
             statusEl.textContent = `Pricing lookup failed: ${error.message}`;
             statusEl.className = `${SCRIPT.id}-status error`;
+            return null;
+        }
+    }
+
+    async function handlePriceLookup(li, toolbar, quickButton, statusEl) {
+        quickButton.disabled = true;
+
+        try {
+            const context = await fetchListingContext(li, statusEl);
+            if (!context) return;
+
+            setReactInputValue(context.input, context.result.value);
+            statusEl.textContent = `Set ${formatMoney(context.result.value)} from ${context.result.source.seller || 'lowest listing'} (${formatMoney(context.result.source.price)})`;
+            statusEl.className = `${SCRIPT.id}-status success`;
+
+            const pickerButton = toolbar.querySelector(`.${SCRIPT.id}-picker-open`);
+            if (pickerButton) {
+                pickerButton.disabled = false;
+            }
         } finally {
             quickButton.disabled = false;
         }
@@ -637,8 +646,31 @@
         li.appendChild(cell);
 
         const quickButton = toolbar.querySelector(`.${SCRIPT.id}-quick-btn`);
+        const pickerButton = toolbar.querySelector(`.${SCRIPT.id}-picker-open`);
         const statusEl = toolbar.querySelector(`.${SCRIPT.id}-status`);
+
         quickButton.addEventListener('click', () => handlePriceLookup(li, toolbar, quickButton, statusEl));
+        pickerButton.addEventListener('click', async () => {
+            pickerButton.disabled = true;
+            try {
+                const context = await fetchListingContext(li, statusEl, 'Loading listings...');
+                if (!context) return;
+
+                openPicker({
+                    itemId: context.itemId,
+                    itemName: context.itemName,
+                    listings: context.result.listings,
+                    input: context.input,
+                    statusEl,
+                    marketValue: context.marketValue
+                });
+
+                statusEl.textContent = `Loaded ${context.result.listings.length} listings`;
+                statusEl.className = `${SCRIPT.id}-status success`;
+            } finally {
+                pickerButton.disabled = false;
+            }
+        });
     }
 
     function scanBazaarRows() {
