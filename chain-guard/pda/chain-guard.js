@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Guard (PDA)
 // @namespace    torn-chain-guard
-// @version      2.0.5
+// @version      2.0.6
 // @description  Prevents accidental attacks when within range of a chain bonus threshold (uses shared PDA menu)
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -201,6 +201,7 @@
     const CONFIG = {
         DEFAULT_THRESHOLD: 15,
         CACHE_KEY: 'chain_guard_data',
+        IGNORE_KEY: 'chain_guard_ignored_threshold',
         BONUS_THRESHOLDS: [10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000],
         DOM_CHAIN_SELECTOR: '.bar-value___uxnah',
         SIDEBAR_CHAIN_FALLBACK_SELECTORS: [
@@ -241,7 +242,7 @@
 
     let chainState = { amount: 0, max: 1000, bonuses: 1.0, lastUpdate: 0, source: 'cache' };
     let lastDangerZoneState = null;
-    let ignoredBonusThreshold = null;
+    let ignoredBonusThreshold = loadIgnoredThreshold();
     let blockedAttackButtons = new Set();
     let chainPollInterval = null;
     let guardPollInterval = null;
@@ -289,7 +290,26 @@
         const dist = getDistanceToBonus();
         return dist !== null && dist <= getThreshold();
     }
+    function loadIgnoredThreshold() {
+        try {
+            const saved = JSON.parse(storageGet(CONFIG.IGNORE_KEY, 'null'));
+            return saved;
+        } catch { return null; }
+    }
+    function saveIgnoredThreshold(value) {
+        ignoredBonusThreshold = value;
+        storageSet(CONFIG.IGNORE_KEY, JSON.stringify(value));
+    }
+    function clearIgnoredThreshold() {
+        ignoredBonusThreshold = null;
+        storageSet(CONFIG.IGNORE_KEY, 'null');
+    }
     function isGuardIgnored() {
+        // Clear ignore if we've passed the threshold
+        if (ignoredBonusThreshold !== null && chainState.amount >= ignoredBonusThreshold) {
+            clearIgnoredThreshold();
+            return false;
+        }
         return ignoredBonusThreshold !== null && chainState.amount < ignoredBonusThreshold;
     }
 
@@ -354,8 +374,9 @@
             </div>
         `;
         banner.querySelector('.cg-ignore').addEventListener('click', () => {
-            ignoredBonusThreshold = chainState.max;
+            saveIgnoredThreshold(chainState.max);
             banner.remove();
+            log('Ignore activated until bonus at', chainState.max);
         });
         document.body.appendChild(banner);
     }
