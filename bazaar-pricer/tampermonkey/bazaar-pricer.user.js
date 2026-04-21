@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Bazaar Pricer
 // @namespace    torn-bazaar-pricer
-// @version      0.2.1
+// @version      0.2.2
 // @description  Add Weav3r-powered quick pricing buttons to Torn bazaar item listings with configurable undercutting.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -23,7 +23,7 @@
     const SCRIPT = {
         id: 'torn-bazaar-pricer',
         name: 'Torn Bazaar Pricer',
-        version: '0.2.1'
+        version: '0.2.2'
     };
 
     const CONFIG = {
@@ -253,12 +253,12 @@
                 width: 84px;
                 min-width: 84px;
                 margin-left: 8px;
-                display: inline-flex;
+                display: flex;
                 flex-direction: column;
                 align-items: stretch;
                 justify-content: flex-start;
                 gap: 5px;
-                vertical-align: top;
+                flex: 0 0 84px;
             }
 
             .${SCRIPT.id}-toolbar {
@@ -606,7 +606,8 @@
         if (!actionsWrap) return;
 
         const amountWrap = li.querySelector('.amount-main-wrap');
-        if (!amountWrap) return;
+        const infoWrap = li.querySelector('.info-main-wrap');
+        if (!amountWrap || !infoWrap) return;
 
         const existingCell = li.querySelector(`.${SCRIPT.id}-cell`);
         if (existingCell) existingCell.remove();
@@ -623,7 +624,14 @@
         `;
 
         cell.appendChild(toolbar);
-        amountWrap.insertAdjacentElement('afterend', cell);
+
+        const parent = amountWrap.parentElement;
+        if (parent) {
+            parent.style.display = 'flex';
+            parent.style.alignItems = 'flex-start';
+            parent.style.gap = '8px';
+            parent.insertBefore(cell, infoWrap);
+        }
 
         const quickButton = toolbar.querySelector(`.${SCRIPT.id}-quick-btn`);
         const statusEl = toolbar.querySelector(`.${SCRIPT.id}-status`);
