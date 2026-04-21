@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Torn Mission Tracker (PDA)
 // @namespace    torn-mission-tracker
-// @version      5.1.2
-// @description  Track Torn missions with time-based alerts. Red = urgent (<24h), Yellow = warning (<48h). Uses PDA-APIKEY for automatic API access.
+// @version      5.1.3
+// @description  Track Torn missions with time-based alerts. Red = urgent (<24h), Yellow = warning (<48h). Uses shared PDA settings and PDA-APIKEY fallback.
 // @author       Kevin
 // @match        https://www.torn.com/*
 // ==/UserScript==
@@ -418,6 +418,12 @@
         }
     }
 
+    function syncConfigFromSettings() {
+        if (!window.PDAScriptsMenu) return;
+        CONFIG.urgentHours = window.PDAScriptsMenu.getSetting('missionTracker', 'urgentHours', 24);
+        CONFIG.warningHours = window.PDAScriptsMenu.getSetting('missionTracker', 'warningHours', 48);
+    }
+
     function registerWithSharedMenu() {
         if (!window.PDAScriptsMenu) {
             setTimeout(registerWithSharedMenu, 500);
@@ -425,20 +431,21 @@
         }
         window.PDAScriptsMenu.register('missionTracker', '📋 Mission Tracker', {
             fields: [
+                { key: 'apiKey', label: 'API Key Override (optional)', type: 'text', default: '' },
                 { key: 'urgentHours', label: 'Urgent Alert Threshold (hours)', type: 'number', default: 24 },
                 { key: 'warningHours', label: 'Warning Alert Threshold (hours)', type: 'number', default: 48 }
             ],
-            onChange: (key) => {
-                CONFIG.urgentHours = window.PDAScriptsMenu.getSetting('missionTracker', 'urgentHours', 24);
-                CONFIG.warningHours = window.PDAScriptsMenu.getSetting('missionTracker', 'warningHours', 48);
+            onChange: () => {
+                syncConfigFromSettings();
                 refresh(true);
             }
         });
+        syncConfigFromSettings();
         log('✓ Registered with shared menu');
     }
 
     function init() {
-        log('v5.1.1 initializing...');
+        log('v5.1.3 initializing...');
         registerWithSharedMenu();
 
         // Wait for nav to exist
