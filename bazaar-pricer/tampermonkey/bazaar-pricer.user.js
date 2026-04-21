@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Bazaar Pricer
 // @namespace    torn-bazaar-pricer
-// @version      0.2.2
+// @version      0.2.3
 // @description  Add Weav3r-powered quick pricing buttons to Torn bazaar item listings with configurable undercutting.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -23,7 +23,7 @@
     const SCRIPT = {
         id: 'torn-bazaar-pricer',
         name: 'Torn Bazaar Pricer',
-        version: '0.2.2'
+        version: '0.2.3'
     };
 
     const CONFIG = {
@@ -259,6 +259,16 @@
                 justify-content: flex-start;
                 gap: 5px;
                 flex: 0 0 84px;
+            }
+
+            .${SCRIPT.id}-amount-wrap {
+                flex: 0 0 auto;
+                min-width: 168px;
+            }
+
+            .${SCRIPT.id}-info-wrap {
+                flex: 1 1 auto;
+                min-width: 0;
             }
 
             .${SCRIPT.id}-toolbar {
@@ -609,6 +619,9 @@
         const infoWrap = li.querySelector('.info-main-wrap');
         if (!amountWrap || !infoWrap) return;
 
+        amountWrap.classList.add(`${SCRIPT.id}-amount-wrap`);
+        infoWrap.classList.add(`${SCRIPT.id}-info-wrap`);
+
         const existingCell = li.querySelector(`.${SCRIPT.id}-cell`);
         if (existingCell) existingCell.remove();
 
@@ -628,6 +641,7 @@
         const parent = amountWrap.parentElement;
         if (parent) {
             parent.style.display = 'flex';
+            parent.style.flexWrap = 'nowrap';
             parent.style.alignItems = 'flex-start';
             parent.style.gap = '8px';
             parent.insertBefore(cell, infoWrap);
