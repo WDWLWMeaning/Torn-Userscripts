@@ -13,6 +13,72 @@
     if (window.__bazaarPricerPDALoaded) return;
     window.__bazaarPricerPDALoaded = true;
 
+    if (!window.PDAScriptsMenu) {
+        const STYLES = { bg: '#2a2a2a', panel: '#333', text: '#ddd', textMuted: '#999', border: '#555', accent: '#82c91e' };
+        const POS_KEY = 'pda_shared_menu_position';
+        function sGet(k, d = '{}') { try { return localStorage.getItem(k) ?? d; } catch { return d; } }
+        function sSet(k, v) { try { localStorage.setItem(k, v); } catch {} }
+        function loadPos() { try { const p = JSON.parse(sGet(POS_KEY)); return { top: p.top ?? 100, left: p.left ?? 10 }; } catch { return { top: 100, left: 10 }; } }
+        function clamp(t, l, w = 44, h = 44) { const m = 5; return { top: Math.max(m, Math.min(t, window.innerHeight - h - m)), left: Math.max(m, Math.min(l, window.innerWidth - w - m)) }; }
+
+        window.PDAScriptsMenu = {
+            _scripts: new Map(), _button: null, _dropdown: null, _isDragging: false,
+            register(id, name, cfg) {
+                if (this._scripts.has(id)) return;
+                this._scripts.set(id, { id, name, config: cfg, values: this._load(id) });
+                this._updateUI();
+            },
+            getSetting(id, k, d) { const s = this._scripts.get(id); return s ? (s.values[k] ?? d) : d; },
+            setSetting(id, k, v) { const s = this._scripts.get(id); if (s) { s.values[k] = v; this._save(id, s.values); if (s.config.onChange) s.config.onChange(k, v); } },
+            _load(id) { try { return JSON.parse(sGet(`pda_script_${id}_settings`, '{}')); } catch { return {}; } },
+            _save(id, v) { sSet(`pda_script_${id}_settings`, JSON.stringify(v)); },
+            _ensureBtn() {
+                if (this._button) return this._button;
+                const b = document.createElement('button');
+                b.id = 'pda-shared-settings-btn';
+                b.innerHTML = '⚙️';
+                const p = clamp(...Object.values(loadPos()));
+                b.style.cssText = `position:fixed;top:${p.top}px;left:${p.left}px;z-index:99999;width:44px;height:44px;background:${STYLES.bg};border:2px solid ${STYLES.border};border-radius:8px;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,0.4);touch-action:none;user-select:none;`;
+                let dragStart = 0, sx, sy, st, sl;
+                const startDrag = (cx, cy) => { this._isDragging = true; sx = cx; sy = cy; st = parseInt(b.style.top); sl = parseInt(b.style.left); };
+                const moveDrag = (cx, cy) => { if (!this._isDragging) return; const c = clamp(st + cy - sy, sl + cx - sx); b.style.top = c.top + 'px'; b.style.left = c.left + 'px'; };
+                const endDrag = () => { if (!this._isDragging) return; this._isDragging = false; sSet(POS_KEY, JSON.stringify({ top: parseInt(b.style.top), left: parseInt(b.style.left) })); };
+                b.addEventListener('mousedown', e => { dragStart = Date.now(); const tm = setTimeout(() => startDrag(e.clientX, e.clientY), 300); const onMove = e => moveDrag(e.clientX, e.clientY); const onUp = () => { clearTimeout(tm); document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); endDrag(); }; document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onUp); });
+                b.addEventListener('touchstart', e => { dragStart = Date.now(); const t = e.touches[0]; const tm = setTimeout(() => startDrag(t.clientX, t.clientY), 300); const onMove = e => { const t = e.touches[0]; moveDrag(t.clientX, t.clientY); }; const onEnd = () => { clearTimeout(tm); document.removeEventListener('touchmove', onMove); document.removeEventListener('touchend', onEnd); endDrag(); }; document.addEventListener('touchmove', onMove, { passive: false }); document.addEventListener('touchend', onEnd); }, { passive: true });
+                b.addEventListener('click', e => { e.stopPropagation(); if (Date.now() - dragStart < 300 && !this._isDragging) this._toggle(); });
+                document.body.appendChild(b); this._button = b; return b;
+            },
+            _toggle() { if (this._dropdown) { this._dropdown.remove(); this._dropdown = null; } else this._show(); },
+            _show() {
+                const d = document.createElement('div');
+                d.style.cssText = `position:fixed;top:100px;left:10px;width:320px;max-height:400px;background:${STYLES.bg};border:1px solid ${STYLES.border};border-radius:8px;z-index:99998;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.5);color:${STYLES.text};font-family:Arial,sans-serif;`;
+                const h = document.createElement('div');
+                h.style.cssText = `padding:12px 16px;border-bottom:1px solid ${STYLES.border};font-weight:bold;font-size:14px;background:linear-gradient(180deg,#3a3a3a,${STYLES.bg});border-radius:8px 8px 0 0;`;
+                h.textContent = '🎮 PDA Scripts';
+                d.appendChild(h);
+                this._scripts.forEach(s => d.appendChild(this._createSection(s)));
+                const close = e => { if (!d.contains(e.target) && e.target !== this._button) { d.remove(); this._dropdown = null; document.removeEventListener('click', close); } };
+                setTimeout(() => document.addEventListener('click', close), 100);
+                document.body.appendChild(d); this._dropdown = d;
+            },
+            _createSection(s) {
+                const sec = document.createElement('div'); sec.style.cssText = 'border-bottom:1px solid ' + STYLES.border;
+                const h = document.createElement('div'); h.style.cssText = `padding:10px 16px;background:${STYLES.panel};font-weight:bold;font-size:13px;`; h.textContent = s.name; sec.appendChild(h);
+                const b = document.createElement('div'); b.style.cssText = 'padding:12px 16px;';
+                if (s.config.fields) s.config.fields.forEach(f => {
+                    const row = document.createElement('div'); row.style.cssText = 'margin-bottom:12px;';
+                    const lbl = document.createElement('label'); lbl.style.cssText = `display:block;color:${STYLES.textMuted};font-size:11px;margin-bottom:4px;text-transform:uppercase;`; lbl.textContent = f.label; row.appendChild(lbl);
+                    if (f.type === 'number') {
+                        const inp = document.createElement('input'); inp.type = 'number'; inp.value = this.getSetting(s.id, f.key, f.default); inp.style.cssText = `width:100%;padding:8px 12px;background:${STYLES.bg};border:1px solid ${STYLES.border};border-radius:4px;color:${STYLES.text};font-size:13px;box-sizing:border-box;`; inp.addEventListener('change', () => this.setSetting(s.id, f.key, parseFloat(inp.value))); row.appendChild(inp);
+                    }
+                    b.appendChild(row);
+                });
+                sec.appendChild(b); return sec;
+            },
+            _updateUI() { this._ensureBtn(); }
+        };
+    }
+
     const SCRIPT = {
         id: 'bazaar-pricer-pda',
         name: 'Bazaar Pricer (PDA)',
@@ -221,27 +287,8 @@
                 font-size: 11px;
                 white-space: nowrap;
             }
-            .${SCRIPT.id}-settings-launch {
-                position: fixed;
-                right: 12px;
-                bottom: 12px;
-                z-index: 999998;
-                padding: 8px 10px;
-            }
         `;
         document.head.appendChild(style);
-    }
-
-    function ensureSettingsButton() {
-        let button = document.getElementById(`${SCRIPT.id}-settings-launch`);
-        if (button) return button;
-        button = document.createElement('button');
-        button.id = `${SCRIPT.id}-settings-launch`;
-        button.className = `${SCRIPT.id}-settings-btn ${SCRIPT.id}-settings-launch`;
-        button.textContent = 'Bazaar Pricer';
-        button.addEventListener('click', openSettings);
-        document.body.appendChild(button);
-        return button;
     }
 
     function formatMoney(value) {
@@ -477,9 +524,29 @@
         observer.observe(document.body, { childList: true, subtree: true });
     }
 
+    function registerWithSharedMenu() {
+        if (!window.PDAScriptsMenu) {
+            setTimeout(registerWithSharedMenu, 500);
+            return;
+        }
+        window.PDAScriptsMenu.register(SCRIPT.id, '🦞 Bazaar Pricer', {
+            fields: [
+                {
+                    key: 'undercutAmount',
+                    label: 'Undercut Amount',
+                    type: 'number',
+                    default: DEFAULT_SETTINGS.undercutAmount
+                }
+            ],
+            onChange: (key, value) => {
+                saveSettings({ ...loadSettings(), [key]: value });
+            }
+        });
+    }
+
     function init() {
         injectStyles();
-        ensureSettingsButton();
+        registerWithSharedMenu();
         scanTargets();
         setupObserver();
         console.log(`[${SCRIPT.name}] v${SCRIPT.version} ready`);
