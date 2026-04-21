@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Bazaar Pricer
 // @namespace    torn-bazaar-pricer
-// @version      0.2.0
+// @version      0.2.1
 // @description  Add Weav3r-powered quick pricing buttons to Torn bazaar item listings with configurable undercutting.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -23,7 +23,7 @@
     const SCRIPT = {
         id: 'torn-bazaar-pricer',
         name: 'Torn Bazaar Pricer',
-        version: '0.2.0'
+        version: '0.2.1'
     };
 
     const CONFIG = {
@@ -250,16 +250,15 @@
             }
 
             .${SCRIPT.id}-cell {
-                width: 92px;
-                min-width: 92px;
-                padding: 8px 6px;
-                box-sizing: border-box;
-                border-left: 1px solid rgba(255,255,255,0.06);
-                display: flex;
+                width: 84px;
+                min-width: 84px;
+                margin-left: 8px;
+                display: inline-flex;
                 flex-direction: column;
                 align-items: stretch;
-                justify-content: center;
+                justify-content: flex-start;
                 gap: 5px;
+                vertical-align: top;
             }
 
             .${SCRIPT.id}-toolbar {
@@ -267,6 +266,7 @@
                 flex-direction: column;
                 align-items: stretch;
                 gap: 5px;
+                width: 100%;
             }
 
             .${SCRIPT.id}-quick-btn {
@@ -538,16 +538,6 @@
         return li.querySelector('.actions-main-wrap');
     }
 
-    function ensureActionLayout(li) {
-        const actionsWrap = getActionsWrap(li);
-        if (!actionsWrap) return null;
-        actionsWrap.style.display = 'grid';
-        actionsWrap.style.gridTemplateColumns = '1fr 92px';
-        actionsWrap.style.alignItems = 'stretch';
-        actionsWrap.style.columnGap = '0';
-        return actionsWrap;
-    }
-
     async function handlePriceLookup(li, toolbar, quickButton, statusEl) {
         const settings = loadSettings();
         if (!settings.enabled) {
@@ -612,8 +602,11 @@
 
         li.dataset.bazaarPricerBound = '1';
 
-        const actionsWrap = ensureActionLayout(li);
+        const actionsWrap = getActionsWrap(li);
         if (!actionsWrap) return;
+
+        const amountWrap = li.querySelector('.amount-main-wrap');
+        if (!amountWrap) return;
 
         const existingCell = li.querySelector(`.${SCRIPT.id}-cell`);
         if (existingCell) existingCell.remove();
@@ -630,7 +623,7 @@
         `;
 
         cell.appendChild(toolbar);
-        actionsWrap.appendChild(cell);
+        amountWrap.insertAdjacentElement('afterend', cell);
 
         const quickButton = toolbar.querySelector(`.${SCRIPT.id}-quick-btn`);
         const statusEl = toolbar.querySelector(`.${SCRIPT.id}-status`);
