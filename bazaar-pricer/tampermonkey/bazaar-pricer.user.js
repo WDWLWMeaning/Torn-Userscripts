@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Bazaar Pricer
 // @namespace    torn-bazaar-pricer
-// @version      0.4.0
+// @version      0.4.1
 // @description  Add Weav3r-powered quick pricing buttons to Torn bazaar item listings with configurable undercutting.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -23,14 +23,13 @@
     const SCRIPT = {
         id: 'torn-bazaar-pricer',
         name: 'Torn Bazaar Pricer',
-        version: '0.4.0'
+        version: '0.4.1'
     };
 
     const CONFIG = {
         weav3rBaseUrl: 'https://weav3r.dev/api',
         cacheTtlMs: 60 * 1000,
-        observerDebounceMs: 250,
-        layoutMode: 'compare-all'
+        observerDebounceMs: 250
     };
 
     const TORN = {
@@ -61,7 +60,8 @@
         enabled: true,
         undercutAmount: 1,
         minimumPrice: 1,
-        ignoreBelowMarketValue: false
+        ignoreBelowMarketValue: false,
+        selectedLayoutId: 'v1'
     };
 
     let observer = null;
@@ -87,6 +87,11 @@
 
     function saveSettings(settings) {
         Storage.set(`${SCRIPT.id}:settings`, settings);
+    }
+
+    function getSelectedPreset() {
+        const settings = loadSettings();
+        return LAYOUT_PRESETS.find((preset) => preset.id === settings.selectedLayoutId) || LAYOUT_PRESETS[0];
     }
 
     function buildWeav3rUrl(path, query = {}) {
@@ -150,7 +155,7 @@
             }
 
             #${SCRIPT.id}-modal .bp-panel {
-                width: 480px;
+                width: 520px;
                 max-width: 92vw;
                 background: ${TORN.panel};
                 border: 1px solid ${TORN.borderLight};
@@ -198,7 +203,8 @@
                 margin-bottom: 6px;
             }
 
-            #${SCRIPT.id}-modal .bp-field input[type="number"] {
+            #${SCRIPT.id}-modal .bp-field input[type="number"],
+            #${SCRIPT.id}-modal .bp-field select {
                 width: 100%;
                 box-sizing: border-box;
                 padding: 8px 10px;
@@ -216,7 +222,8 @@
                 font-size: 12px;
             }
 
-            #${SCRIPT.id}-modal .bp-actions {
+            #${SCRIPT.id}-modal .bp-actions,
+            #${SCRIPT.id}-modal .bp-layout-actions {
                 margin-top: 18px;
                 display: flex;
                 gap: 10px;
@@ -247,6 +254,12 @@
             #${SCRIPT.id}-modal .bp-btn-primary,
             .${SCRIPT.id}-quick-btn,
             .${SCRIPT.id}-pick-btn { border-color: ${TORN.green}; }
+
+            #${SCRIPT.id}-modal .bp-layout-note {
+                margin-top: 8px;
+                font-size: 11px;
+                color: ${TORN.textMuted};
+            }
 
             li.clearfix.no-mods[data-group="child"] {
                 position: relative;
@@ -303,9 +316,6 @@
                 white-space: normal;
             }
 
-            .${SCRIPT.id}-status.error { color: ${TORN.red}; }
-            .${SCRIPT.id}-status.success { color: ${TORN.green}; }
-
             .${SCRIPT.id}-badge {
                 position: absolute;
                 top: -8px;
@@ -322,6 +332,9 @@
                 font-weight: bold;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.4);
             }
+
+            .${SCRIPT.id}-status.error { color: ${TORN.red}; }
+            .${SCRIPT.id}-status.success { color: ${TORN.green}; }
 
             .${SCRIPT.id}-picker-list {
                 display: flex;
@@ -430,6 +443,7 @@
         injectStyles();
         closeModal();
         const settings = loadSettings();
+        const currentPreset = getSelectedPreset();
         const modal = document.createElement('div');
         modal.id = `${SCRIPT.id}-modal`;
         modal.innerHTML = `
@@ -439,6 +453,19 @@
                     <button class="bp-close" type="button">×</button>
                 </div>
                 <div class="bp-body">
+                    <div class="bp-field">
+                        <label>Layout preview</label>
+                        <select id="${SCRIPT.id}-layout">
+                            ${LAYOUT_PRESETS.map((preset) => `<option value="${preset.id}" ${preset.id === settings.selectedLayoutId ? 'selected' : ''}>Layout ${preset.label}</option>`).join('')}
+                        </select>
+                        <div class="bp-layout-actions">
+                            <button class="bp-btn" type="button" data-layout-nav="prev">Previous</button>
+                            <button class="bp-btn" type="button" data-layout-nav="next">Next</button>
+                        </div>
+                        <div class="bp-layout-note">
+                            Currently previewing layout ${currentPreset.label}. Change it here and save to update the bazaar rows.
+                        </div>
+                    </div>
                     <div class="bp-field">
                         <label>Undercut amount</label>
                         <input type="number" id="${SCRIPT.id}-undercut" min="0" step="1" value="${settings.undercutAmount}">
@@ -464,17 +491,28 @@
         `;
         document.body.appendChild(modal);
 
+        const layoutSelect = modal.querySelector(`#${SCRIPT.id}-layout`);
         modal.addEventListener('click', (event) => {
             if (event.target === modal || event.target.closest('.bp-close') || event.target.dataset.action === 'cancel') {
                 closeModal();
                 return;
             }
+
+            if (event.target.dataset.layoutNav) {
+                const currentIndex = LAYOUT_PRESETS.findIndex((preset) => preset.id === layoutSelect.value);
+                const direction = event.target.dataset.layoutNav === 'next' ? 1 : -1;
+                const nextIndex = (currentIndex + direction + LAYOUT_PRESETS.length) % LAYOUT_PRESETS.length;
+                layoutSelect.value = LAYOUT_PRESETS[nextIndex].id;
+                return;
+            }
+
             if (event.target.dataset.action === 'save') {
                 saveSettings({
                     enabled: modal.querySelector(`#${SCRIPT.id}-enabled`).checked,
                     undercutAmount: Math.max(0, Number(modal.querySelector(`#${SCRIPT.id}-undercut`).value) || 0),
                     minimumPrice: Math.max(1, Number(modal.querySelector(`#${SCRIPT.id}-minimum`).value) || 1),
-                    ignoreBelowMarketValue: modal.querySelector(`#${SCRIPT.id}-ignore-market`).checked
+                    ignoreBelowMarketValue: modal.querySelector(`#${SCRIPT.id}-ignore-market`).checked,
+                    selectedLayoutId: layoutSelect.value
                 });
                 closeModal();
                 scanBazaarRows();
@@ -644,16 +682,8 @@
     function enhanceBazaarRow(li) {
         const input = getPriceInput(li);
         if (!input) return;
-
         li.querySelectorAll(`.${SCRIPT.id}-cell`).forEach((node) => node.remove());
-
-        const presets = CONFIG.layoutMode === 'compare-all'
-            ? LAYOUT_PRESETS
-            : [LAYOUT_PRESETS[0]];
-
-        presets.forEach((preset) => {
-            li.appendChild(createControlCell(li, preset));
-        });
+        li.appendChild(createControlCell(li, getSelectedPreset()));
     }
 
     function scanBazaarRows() {
