@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Guard (PDA)
 // @namespace    torn-chain-guard
-// @version      2.0.6
+// @version      2.0.7
 // @description  Prevents accidental attacks when within range of a chain bonus threshold (uses shared PDA menu)
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -177,8 +177,14 @@
             },
             _createSection(s) {
                 const sec = document.createElement('div'); sec.style.cssText = `border-bottom:1px solid ${STYLES.border};`;
-                const h = document.createElement('div'); h.style.cssText = `padding:10px 16px;background:${STYLES.panel};font-weight:bold;font-size:13px;`; h.textContent = s.name; sec.appendChild(h);
-                const b = document.createElement('div'); b.style.cssText = 'padding:12px 16px;';
+                const h = document.createElement('div'); h.style.cssText = `padding:10px 16px;background:${STYLES.panel};font-weight:bold;font-size:13px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;`; h.innerHTML = `<span>${s.name}</span><span style="color:${STYLES.textMuted};font-size:12px;">▸</span>`; sec.appendChild(h);
+                const b = document.createElement('div'); b.style.cssText = 'padding:12px 16px;display:none;';
+                let collapsed = true;
+                h.addEventListener('click', () => {
+                    collapsed = !collapsed;
+                    b.style.display = collapsed ? 'none' : 'block';
+                    h.lastChild.textContent = collapsed ? '▸' : '▾';
+                });
                 if (s.config.fields) s.config.fields.forEach(f => b.appendChild(this._createField(s, f)));
                 sec.appendChild(b); return sec;
             },
@@ -467,7 +473,7 @@
     // Init
     function init() {
         try {
-            log('v2.0.5 initializing...');
+            log('v2.0.7 initializing...');
             ensureStyles();
             loadChainCache();
             registerWithSharedMenu();
