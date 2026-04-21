@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Bazaar Pricer
 // @namespace    torn-bazaar-pricer
-// @version      1.0.3
+// @version      1.0.4
 // @description  Add a Weav3r-powered listing picker button beside Torn bazaar price inputs.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -23,7 +23,7 @@
     const SCRIPT = {
         id: 'torn-bazaar-pricer',
         name: 'Torn Bazaar Pricer',
-        version: '1.0.3'
+        version: '1.0.4'
     };
 
     const CONFIG = {
@@ -346,8 +346,8 @@
         return match ? Number(match[1].replace(/,/g, '')) : null;
     }
 
-    function getVisiblePriceInput(li) {
-        return li.querySelector('.input-money-group input.input-money[type="text"]');
+    function getVisiblePriceInput(container) {
+        return container.querySelector('.input-money-group input.input-money:not([type="hidden"])');
     }
 
     function setReactInputValue(input, value) {
@@ -519,8 +519,8 @@
         return button;
     }
 
-    function enhanceBazaarRow(li) {
-        const input = getVisiblePriceInput(li);
+    function enhancePriceContainer(container) {
+        const input = getVisiblePriceInput(container);
         if (!input) return;
 
         const group = input.closest('.input-money-group');
@@ -542,7 +542,7 @@
             wrapper.appendChild(button);
             group.insertBefore(wrapper, group.querySelector('input[type="hidden"]'));
 
-            button.addEventListener('click', () => openPickerForRow(li, button));
+            button.addEventListener('click', () => openPickerForRow(container, button));
         } else {
             const priceInput = wrapper.querySelector('input.input-money[type="text"]');
             if (priceInput) {
@@ -554,9 +554,16 @@
     }
 
     function scanBazaarRows() {
-        const rows = document.querySelectorAll('.items-cont li.clearfix.no-mods[data-group="child"]');
-        rows.forEach((li) => {
-            enhanceBazaarRow(li);
+        const seen = new Set();
+        const containers = [
+            ...document.querySelectorAll('.items-cont li.clearfix.no-mods[data-group="child"]'),
+            ...document.querySelectorAll('[data-testid^="item-"]')
+        ];
+
+        containers.forEach((container) => {
+            if (seen.has(container)) return;
+            seen.add(container);
+            enhancePriceContainer(container);
         });
     }
 
