@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Bazaar Pricer
 // @namespace    torn-bazaar-pricer
-// @version      0.3.0
+// @version      0.3.1
 // @description  Add Weav3r-powered quick pricing buttons to Torn bazaar item listings with configurable undercutting.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -23,7 +23,7 @@
     const SCRIPT = {
         id: 'torn-bazaar-pricer',
         name: 'Torn Bazaar Pricer',
-        version: '0.3.0'
+        version: '0.3.1'
     };
 
     const CONFIG = {
@@ -251,21 +251,20 @@
 
             li.clearfix.no-mods[data-group="child"] {
                 position: relative;
-                padding-right: 106px;
             }
 
             .${SCRIPT.id}-cell {
                 position: absolute;
-                top: 50%;
+                top: 12px;
                 right: 10px;
-                transform: translateY(-50%);
+                transform: none;
                 width: 84px;
                 display: flex;
                 flex-direction: column;
                 align-items: stretch;
                 justify-content: center;
                 gap: 5px;
-                z-index: 2;
+                z-index: 5;
             }
 
             .${SCRIPT.id}-toolbar {
