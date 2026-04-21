@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Bazaar Pricer
 // @namespace    torn-bazaar-pricer
-// @version      0.1.0
+// @version      0.1.1
 // @description  Add Weav3r-powered quick pricing buttons to Torn bazaar item listings with configurable undercutting.
 // @author       Kevin
 // @match        https://www.torn.com/*
@@ -23,7 +23,7 @@
     const SCRIPT = {
         id: 'torn-bazaar-pricer',
         name: 'Torn Bazaar Pricer',
-        version: '0.1.0'
+        version: '0.1.1'
     };
 
     const CONFIG = {
@@ -252,20 +252,28 @@
             .${SCRIPT.id}-toolbar {
                 margin-top: 6px;
                 display: flex;
+                align-items: center;
+                justify-content: flex-end;
                 gap: 6px;
                 flex-wrap: wrap;
-                align-items: center;
             }
 
             .${SCRIPT.id}-quick-btn {
-                padding: 5px 8px;
-                font-size: 11px;
-                min-height: 24px;
+                padding: 3px 7px;
+                font-size: 10px;
+                min-height: 22px;
+                line-height: 1.1;
             }
 
             .${SCRIPT.id}-status {
-                font-size: 11px;
+                flex-basis: 100%;
+                text-align: right;
+                font-size: 10px;
+                line-height: 1.3;
                 color: ${TORN.textMuted};
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
 
             .${SCRIPT.id}-status.error {
@@ -588,9 +596,9 @@
         const toolbar = document.createElement('div');
         toolbar.className = `${SCRIPT.id}-toolbar`;
         toolbar.innerHTML = `
-            <button type="button" class="${SCRIPT.id}-quick-btn">Use bazaar price</button>
-            <button type="button" class="${SCRIPT.id}-quick-btn ${SCRIPT.id}-picker-open" disabled>Choose listing</button>
-            <span class="${SCRIPT.id}-status">Ready</span>
+            <button type="button" class="${SCRIPT.id}-quick-btn">Bazaar</button>
+            <button type="button" class="${SCRIPT.id}-quick-btn ${SCRIPT.id}-picker-open" disabled>Pick</button>
+            <span class="${SCRIPT.id}-status"></span>
         `;
 
         priceContainer.appendChild(toolbar);
