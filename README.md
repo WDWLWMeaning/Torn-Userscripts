@@ -6,7 +6,7 @@
 
 > A branded collection of Torn userscripts for Tampermonkey and Torn PDA, with shared UI patterns, unified PDA settings, and gameplay-focused quality of life improvements.
 
-[![GitLab](https://img.shields.io/badge/GitLab-Meaning [2099129]%2Ftorn--userscripts-FC6D26?logo=gitlab&logoColor=white)](https://github.com/WDWLWMeaning/Torn-Userscripts)
+[![GitLab](https://img.shields.io/badge/GitLab-Meaning%20[2099129]%2Ftorn--userscripts-FC6D26?logo=gitlab&logoColor=white)](https://git.er-ic.ca/Meaning%20[2099129]/torn-userscripts)
 [![Torn](https://img.shields.io/badge/Torn-API%20v2-blue)](https://www.torn.com/api.html)
 [![Tampermonkey](https://img.shields.io/badge/Tampermonkey-Compatible-green)](https://www.tampermonkey.net/)
 [![Torn PDA](https://img.shields.io/badge/Torn%20PDA-Compatible-purple)](https://github.com/Manuito83/torn-pda)
