@@ -3,7 +3,7 @@
 // @namespace    torn-pda-shared-menu
 // @version      1.0.0
 // @description  Shared draggable settings menu for Torn PDA userscripts
-// @author       Kevin
+// @author       Meaning [2099129]
 // @match        https://www.torn.com/*
 // @grant        none
 // @run-at       document-start

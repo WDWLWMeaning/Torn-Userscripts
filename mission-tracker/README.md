@@ -2,7 +2,7 @@
 
 > Track your TORN missions with native Torn styling and urgency indicators.
 
-[![Version](https://img.shields.io/badge/version-5.1.2-blue)](https://git.er-ic.ca/Kevin/torn-userscripts)
+[![Version](https://img.shields.io/badge/version-5.1.2-blue)](https://github.com/WDWLWMeaning/Torn-Userscripts)
 [![Tampermonkey](https://img.shields.io/badge/Tampermonkey-Compatible-green)](https://www.tampermonkey.net/)
 [![Torn PDA](https://img.shields.io/badge/Torn%20PDA-Compatible-purple)](https://github.com/Manuito83/torn-pda)
 [![Torn Rules](https://img.shields.io/badge/Torn%20Rules-Compliant-brightgreen)](#torn-rules-compliance)
@@ -30,7 +30,7 @@ Mission Tracker adds a visual badge to the **Missions** button in TORN, showing 
 1. Install [Tampermonkey](https://www.tampermonkey.net/) extension for your browser
 2. Click this link to install:
    ```
-   https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/mission-tracker/tampermonkey/mission-tracker.user.js
+   https://raw.githubusercontent.com/WDWLWMeaning/Torn-Userscripts/main/mission-tracker/tampermonkey/mission-tracker.user.js
    ```
 3. Tampermonkey will prompt you to install — click "Install"
 4. Enter your TORN API key when prompted (required to fetch mission data)
@@ -42,7 +42,7 @@ Mission Tracker adds a visual badge to the **Missions** button in TORN, showing 
 3. Tap **"Manage Scripts" → "+"**
 4. Paste the script from:
    ```
-   https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/mission-tracker/pda/mission-tracker.js
+   https://raw.githubusercontent.com/WDWLWMeaning/Torn-Userscripts/main/mission-tracker/pda/mission-tracker.js
    ```
 5. Set **"Inject at"** to **End**
 6. The script will automatically use your PDA-connected API key
@@ -138,9 +138,9 @@ This script is fully compliant with [Torn's Scripting Rules](https://www.torn.co
 
 ## Credits
 
-Created by **Kevin** for the TORN community.
+Created by **Meaning [2099129]** for the TORN community.
 
-Repo: https://git.er-ic.ca/Kevin/torn-userscripts
+Repo: https://github.com/WDWLWMeaning/Torn-Userscripts
 
 ---
 

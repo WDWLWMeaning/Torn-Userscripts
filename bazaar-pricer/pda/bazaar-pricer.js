@@ -3,7 +3,7 @@
 // @namespace    torn-bazaar-pricer-pda
 // @version      1.0.4
 // @description  PDA companion for Bazaar Pricer with inline Weav3r listing picker beside bazaar price inputs.
-// @author       Kevin
+// @author       Meaning [2099129]
 // @match        https://www.torn.com/*
 // ==/UserScript==
 

@@ -6,7 +6,7 @@
 
 > A branded collection of Torn userscripts for Tampermonkey and Torn PDA, with shared UI patterns, unified PDA settings, and gameplay-focused quality of life improvements.
 
-[![GitLab](https://img.shields.io/badge/GitLab-Kevin%2Ftorn--userscripts-FC6D26?logo=gitlab&logoColor=white)](https://git.er-ic.ca/Kevin/torn-userscripts)
+[![GitLab](https://img.shields.io/badge/GitLab-Meaning [2099129]%2Ftorn--userscripts-FC6D26?logo=gitlab&logoColor=white)](https://github.com/WDWLWMeaning/Torn-Userscripts)
 [![Torn](https://img.shields.io/badge/Torn-API%20v2-blue)](https://www.torn.com/api.html)
 [![Tampermonkey](https://img.shields.io/badge/Tampermonkey-Compatible-green)](https://www.tampermonkey.net/)
 [![Torn PDA](https://img.shields.io/badge/Torn%20PDA-Compatible-purple)](https://github.com/Manuito83/torn-pda)
@@ -75,12 +75,12 @@ Prevents accidental attacks when near chain bonus thresholds.
 
 **Tampermonkey Install:**
 ```text
-https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/chain-guard/tampermonkey/chain-guard.user.js
+https://raw.githubusercontent.com/WDWLWMeaning/Torn-Userscripts/main/chain-guard/tampermonkey/chain-guard.user.js
 ```
 
 **Torn PDA Install:** Copy the script from:
 ```text
-https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/chain-guard/pda/chain-guard.js
+https://raw.githubusercontent.com/WDWLWMeaning/Torn-Userscripts/main/chain-guard/pda/chain-guard.js
 ```
 
 See also: [chain-guard/README.md](chain-guard/README.md)
@@ -102,8 +102,8 @@ Each Tampermonkey script has a corresponding `.meta.js` file containing only the
 // ==UserScript==
 // @name         Torn Chain Guard
 // @version      1.6.0
-// @updateURL    https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/chain-guard/tampermonkey/chain-guard.meta.js
-// @downloadURL  https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/chain-guard/tampermonkey/chain-guard.user.js
+// @updateURL    https://raw.githubusercontent.com/WDWLWMeaning/Torn-Userscripts/main/chain-guard/tampermonkey/chain-guard.meta.js
+// @downloadURL  https://raw.githubusercontent.com/WDWLWMeaning/Torn-Userscripts/main/chain-guard/tampermonkey/chain-guard.user.js
 // ==/UserScript==
 ```
 
@@ -128,12 +128,12 @@ Track your missions with native Torn styling. Available for both Tampermonkey an
 
 **Tampermonkey Install:**
 ```text
-https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/mission-tracker/tampermonkey/mission-tracker.user.js
+https://raw.githubusercontent.com/WDWLWMeaning/Torn-Userscripts/main/mission-tracker/tampermonkey/mission-tracker.user.js
 ```
 
 **Torn PDA Install:** Copy the script from:
 ```text
-https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/mission-tracker/pda/mission-tracker.js
+https://raw.githubusercontent.com/WDWLWMeaning/Torn-Userscripts/main/mission-tracker/pda/mission-tracker.js
 ```
 
 See also: [mission-tracker/README.md](mission-tracker/README.md)
@@ -153,12 +153,12 @@ Inline bazaar listing picker for Torn bazaar pricing, powered by Weav3r marketpl
 
 **Tampermonkey Install:**
 ```text
-https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/bazaar-pricer/tampermonkey/bazaar-pricer.user.js
+https://raw.githubusercontent.com/WDWLWMeaning/Torn-Userscripts/main/bazaar-pricer/tampermonkey/bazaar-pricer.user.js
 ```
 
 **Torn PDA Install:** Copy the script from:
 ```text
-https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/bazaar-pricer/pda/bazaar-pricer.js
+https://raw.githubusercontent.com/WDWLWMeaning/Torn-Userscripts/main/bazaar-pricer/pda/bazaar-pricer.js
 ```
 
 See also: [bazaar-pricer/README.md](bazaar-pricer/README.md)

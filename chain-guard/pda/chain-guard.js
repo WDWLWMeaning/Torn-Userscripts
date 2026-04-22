@@ -3,7 +3,7 @@
 // @namespace    torn-chain-guard
 // @version      2.0.7
 // @description  Prevents accidental attacks when within range of a chain bonus threshold (uses shared PDA menu)
-// @author       Kevin
+// @author       Meaning [2099129]
 // @match        https://www.torn.com/*
 // ==/UserScript==
 

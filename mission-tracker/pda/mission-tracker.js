@@ -3,7 +3,7 @@
 // @namespace    torn-mission-tracker
 // @version      5.1.4
 // @description  Track Torn missions with time-based alerts. Red = urgent (<24h), Yellow = warning (<48h).
-// @author       Kevin
+// @author       Meaning [2099129]
 // @match        https://www.torn.com/*
 // ==/UserScript==
 

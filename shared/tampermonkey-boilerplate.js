@@ -3,7 +3,7 @@
 // @namespace    torn-tampermonkey-boilerplate
 // @version      1.0.0
 // @description  Self-contained boilerplate for Torn Tampermonkey userscripts
-// @author       Kevin
+// @author       Meaning [2099129]
 // @match        https://www.torn.com/*
 // @grant        GM_setValue
 // @grant        GM_getValue

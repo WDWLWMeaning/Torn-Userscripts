@@ -3,7 +3,7 @@
 // @namespace    torn-mission-tracker
 // @version      3.2.5
 // @description  Track Torn missions with native Torn styling. Red alert for <24h, yellow for <48h.
-// @author       Kevin
+// @author       Meaning [2099129]
 // @match        https://www.torn.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
@@ -11,8 +11,8 @@
 // @grant        GM_deleteValue
 // @grant        GM_registerMenuCommand
 // @grant        GM_addStyle
-// @updateURL    https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/mission-tracker/tampermonkey/mission-tracker.meta.js
-// @downloadURL  https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/mission-tracker/tampermonkey/mission-tracker.user.js
-// @icon         https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/assets/favicon_io/favicon-32x32.png
+// @updateURL    https://raw.githubusercontent.com/WDWLWMeaning/Torn-Userscripts/main/mission-tracker/tampermonkey/mission-tracker.meta.js
+// @downloadURL  https://raw.githubusercontent.com/WDWLWMeaning/Torn-Userscripts/main/mission-tracker/tampermonkey/mission-tracker.user.js
+// @icon         https://raw.githubusercontent.com/WDWLWMeaning/Torn-Userscripts/main/assets/favicon_io/favicon-32x32.png
 // @run-at       document-end
 // ==/UserScript==

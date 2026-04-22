@@ -2,7 +2,7 @@
 
 > Prevent accidental attacks when you're close to a chain bonus threshold in TORN City.
 
-[![Version](https://img.shields.io/badge/version-2.0.7-blue)](https://git.er-ic.ca/Kevin/torn-userscripts)
+[![Version](https://img.shields.io/badge/version-2.0.7-blue)](https://github.com/WDWLWMeaning/Torn-Userscripts)
 [![Tampermonkey](https://img.shields.io/badge/Tampermonkey-Compatible-green)](https://www.tampermonkey.net/)
 [![Torn PDA](https://img.shields.io/badge/Torn%20PDA-Compatible-purple)](https://github.com/Manuito83/torn-pda)
 [![Torn Rules](https://img.shields.io/badge/Torn%20Rules-Compliant-brightgreen)](#torn-rules-compliance)
@@ -33,7 +33,7 @@ Chain Guard protects your faction's chain bonus by preventing accidental attacks
 1. Install [Tampermonkey](https://www.tampermonkey.net/) extension
 2. Click this link to install:
    ```
-   https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/chain-guard/tampermonkey/chain-guard.user.js
+   https://raw.githubusercontent.com/WDWLWMeaning/Torn-Userscripts/main/chain-guard/tampermonkey/chain-guard.user.js
    ```
 3. Tampermonkey will prompt you to install
 
@@ -44,7 +44,7 @@ Chain Guard protects your faction's chain bonus by preventing accidental attacks
 3. Tap "Manage Scripts" → "+" to add new
 4. Copy the contents of:
    ```
-   https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/chain-guard/pda/chain-guard.js
+   https://raw.githubusercontent.com/WDWLWMeaning/Torn-Userscripts/main/chain-guard/pda/chain-guard.js
    ```
 5. Paste and save
 
@@ -131,6 +131,6 @@ This script is fully compliant with [Torn's Scripting Rules](https://www.torn.co
 
 ## Credits
 
-Created by **Kevin** for the TORN community.
+Created by **Meaning [2099129]** for the TORN community.
 
-Repo: https://git.er-ic.ca/Kevin/torn-userscripts
+Repo: https://github.com/WDWLWMeaning/Torn-Userscripts

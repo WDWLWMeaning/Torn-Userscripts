@@ -21,7 +21,7 @@ Bazaar Pricer adds a small inline shop button beside bazaar price inputs so you 
 ### Tampermonkey
 
 ```text
-https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/bazaar-pricer/tampermonkey/bazaar-pricer.user.js
+https://raw.githubusercontent.com/WDWLWMeaning/Torn-Userscripts/main/bazaar-pricer/tampermonkey/bazaar-pricer.user.js
 ```
 
 ### Torn PDA
@@ -29,7 +29,7 @@ https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/bazaar-pricer/tampermonkey/
 Copy the script from:
 
 ```text
-https://git.er-ic.ca/Kevin/torn-userscripts/raw/main/bazaar-pricer/pda/bazaar-pricer.js
+https://raw.githubusercontent.com/WDWLWMeaning/Torn-Userscripts/main/bazaar-pricer/pda/bazaar-pricer.js
 ```
 
 ## Settings
