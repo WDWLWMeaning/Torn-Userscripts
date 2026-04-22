@@ -4,6 +4,8 @@
   <img src="../assets/torn-userscripts-logo.png" alt="Torn Userscripts logo" width="120">
 </p>
 
+[![Torn Rules](https://img.shields.io/badge/Torn%20Rules-Compliant-brightgreen)](#torn-rules-compliance)
+
 Bazaar Pricer adds a small inline shop button beside bazaar price inputs so you can open current public Weav3r listings and choose a price quickly.
 
 ## Features
@@ -36,6 +38,16 @@ Current setting:
 - Undercut amount
 
 On Torn PDA, Bazaar Pricer uses the shared unified **⚙️ PDA Scripts** settings menu. Its section is collapsible and now defaults to collapsed.
+
+## Torn Rules Compliance
+
+This script is fully compliant with [Torn's Scripting Rules](https://www.torn.com/rules.php):
+
+- ✅ Uses **Weav3r public API** (third-party, not Torn scraping)
+- ✅ No non-API requests to Torn
+- ✅ No page scraping or data extraction from Torn
+- ✅ All marketplace data comes from public Weav3r listings
+- ✅ User-initiated actions only (click button to view prices)
 
 ## Notes
 

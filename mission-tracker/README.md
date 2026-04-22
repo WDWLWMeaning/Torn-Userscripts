@@ -5,6 +5,7 @@
 [![Version](https://img.shields.io/badge/version-5.1.2-blue)](https://git.er-ic.ca/Kevin/torn-userscripts)
 [![Tampermonkey](https://img.shields.io/badge/Tampermonkey-Compatible-green)](https://www.tampermonkey.net/)
 [![Torn PDA](https://img.shields.io/badge/Torn%20PDA-Compatible-purple)](https://github.com/Manuito83/torn-pda)
+[![Torn Rules](https://img.shields.io/badge/Torn%20Rules-Compliant-brightgreen)](#torn-rules-compliance)
 
 ## What It Does
 
@@ -124,6 +125,16 @@ On Torn PDA, Mission Tracker uses the shared unified **⚙️ PDA Scripts** sett
 - Native TORN styling
 - Smart caching implementation
 - Settings panel with API key validation
+
+## Torn Rules Compliance
+
+This script is fully compliant with [Torn's Scripting Rules](https://www.torn.com/rules.php):
+
+- ✅ Uses **official Torn API v2** only (`/user/missions`)
+- ✅ No page scraping or DOM extraction
+- ✅ No background requests to Torn pages
+- ✅ No automated alerts from unfocused pages
+- ✅ User's API key stored locally only
 
 ## Credits
 

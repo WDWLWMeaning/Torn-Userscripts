@@ -2,6 +2,37 @@
 
 **READ THIS FIRST** if you're working on this repository. This file defines the structure and conventions.
 
+---
+
+## ⚠️ CRITICAL: Torn Scripting Rules (Game Ban Risk)
+
+**Violating these rules can result in a permanent game ban. All scripts in this repository MUST comply.**
+
+### What IS Allowed
+- Scripts that use data from **Torn's official API** (`https://api.torn.com`)
+- Scripts that read/modify the **currently active Torn page** the user is viewing
+- User-initiated actions (clicking buttons, manual refreshes)
+
+### What is NOT Allowed
+- **Scraping pages** that aren't currently being viewed
+- **Making non-API requests** to Torn automatically
+- **Background polling** of Torn pages without user action
+- **Bypassing CAPTCHA** protections
+- **Extracting data from unfocused pages** to send elsewhere
+- **Automated alerts** from background page monitoring
+- **Any requests not directly and manually initiated by the user**
+
+### The Golden Rule
+> Scripts are permitted only when they rely on data from Torn's API or from a page that the user has **manually loaded and is actively viewing**.
+
+**When building scripts:**
+1. Use the Torn API for data fetching (with proper caching)
+2. Only interact with the DOM of the current page
+3. Never automate requests to Torn pages in the background
+4. Never scrape HTML from pages the user isn't viewing
+
+---
+
 ## Repository Structure
 
 ```

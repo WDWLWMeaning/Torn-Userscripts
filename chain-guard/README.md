@@ -5,6 +5,7 @@
 [![Version](https://img.shields.io/badge/version-2.0.7-blue)](https://git.er-ic.ca/Kevin/torn-userscripts)
 [![Tampermonkey](https://img.shields.io/badge/Tampermonkey-Compatible-green)](https://www.tampermonkey.net/)
 [![Torn PDA](https://img.shields.io/badge/Torn%20PDA-Compatible-purple)](https://github.com/Manuito83/torn-pda)
+[![Torn Rules](https://img.shields.io/badge/Torn%20Rules-Compliant-brightgreen)](#torn-rules-compliance)
 
 ## What It Does
 
@@ -117,6 +118,16 @@ The script knows all TORN chain bonus levels:
 - Attack button blocking
 - Live button text updates
 - Settings panel
+
+## Torn Rules Compliance
+
+This script is fully compliant with [Torn's Scripting Rules](https://www.torn.com/rules.php):
+
+- ✅ Only reads data from the **currently viewed page** (chain bar in sidebar/attack page)
+- ✅ No non-API requests to Torn
+- ✅ No background page scraping
+- ✅ No automated alerts from unfocused pages
+- ✅ All interactions are user-initiated
 
 ## Credits
 
