@@ -341,7 +341,7 @@
     }
 
     function getMarketValue(li) {
-        const text = li.querySelector('.info-wrap')?.textContent || '';
+        const text = li.querySelector('.info-wrap, .rrp___aiQg2')?.textContent || '';
         const match = text.match(/\$([\d,]+)/);
         return match ? Number(match[1].replace(/,/g, '')) : null;
     }
@@ -492,8 +492,10 @@
 
         try {
             const data = await getMarketplaceItem(itemId);
-            const listings = chooseListings(data.listings);
+            const rawListings = data?.listings ?? data?.data?.listings ?? data?.results ?? data?.data ?? [];
+            const listings = chooseListings(rawListings);
             if (!listings.length) {
+                console.warn(`[${SCRIPT.name}] No usable listings for item ${itemId}`, data);
                 button.classList.add('error');
                 return;
             }
