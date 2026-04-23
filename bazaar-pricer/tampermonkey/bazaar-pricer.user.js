@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Bazaar Pricer
 // @namespace    torn-bazaar-pricer
-// @version      1.0.8
+// @version      1.0.9
 // @description  Add a Weav3r-powered listing picker button beside Torn bazaar price inputs.
 // @author       Meaning [2099129]
 // @match        https://www.torn.com/*
@@ -26,7 +26,7 @@
     const SCRIPT = {
         id: 'torn-bazaar-pricer',
         name: 'Torn Bazaar Pricer',
-        version: '1.0.8'
+        version: '1.0.9'
     };
 
     const DEBUG = true;
@@ -347,7 +347,7 @@
     }
 
     function getPriceInput(li) {
-        return li.querySelector('input.input-money[type="text"]');
+        return li.querySelector('.input-money-group input.input-money:not([type="hidden"])');
     }
 
     function getMarketValue(li) {
@@ -595,7 +595,7 @@
 
             button.addEventListener('click', () => openPickerForRow(container, button));
         } else {
-            const priceInput = wrapper.querySelector('input.input-money[type="text"]');
+            const priceInput = wrapper.querySelector('input.input-money:not([type="hidden"])');
             if (priceInput) {
                 priceInput.style.width = '45px';
                 priceInput.style.minWidth = '45px';
