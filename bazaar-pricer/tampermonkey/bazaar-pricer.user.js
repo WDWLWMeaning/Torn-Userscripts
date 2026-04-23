@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Bazaar Pricer
 // @namespace    torn-bazaar-pricer
-// @version      1.0.7
+// @version      1.0.8
 // @description  Add a Weav3r-powered listing picker button beside Torn bazaar price inputs.
 // @author       Meaning [2099129]
 // @match        https://www.torn.com/*
@@ -26,7 +26,7 @@
     const SCRIPT = {
         id: 'torn-bazaar-pricer',
         name: 'Torn Bazaar Pricer',
-        version: '1.0.7'
+        version: '1.0.8'
     };
 
     const DEBUG = true;
@@ -608,7 +608,7 @@
         const seen = new Set();
         const containers = [
             ...document.querySelectorAll('.items-cont li.clearfix.no-mods[data-group="child"]'),
-            ...document.querySelectorAll('[data-testid^="item-"]')
+            ...document.querySelectorAll('[data-testid="sortable-item"]')
         ];
 
         containers.forEach((container) => {
