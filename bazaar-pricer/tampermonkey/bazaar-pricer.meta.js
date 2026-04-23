@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Bazaar Pricer
 // @namespace    torn-bazaar-pricer
-// @version      1.0.4
+// @version      1.0.5
 // @description  Add a Weav3r-powered listing picker button beside Torn bazaar price inputs.
 // @author       Meaning [2099129]
 // @match        https://www.torn.com/*
