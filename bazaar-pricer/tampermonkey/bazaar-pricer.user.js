@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Bazaar Pricer
 // @namespace    torn-bazaar-pricer
-// @version      1.0.6
+// @version      1.0.7
 // @description  Add a Weav3r-powered listing picker button beside Torn bazaar price inputs.
 // @author       Meaning [2099129]
 // @match        https://www.torn.com/*
@@ -26,8 +26,15 @@
     const SCRIPT = {
         id: 'torn-bazaar-pricer',
         name: 'Torn Bazaar Pricer',
-        version: '1.0.6'
+        version: '1.0.7'
     };
+
+    const DEBUG = true;
+
+    function debugLog(...args) {
+        if (!DEBUG) return;
+        console.log(`[${SCRIPT.name}]`, ...args);
+    }
 
     const CONFIG = {
         weav3rBaseUrl: 'https://weav3r.dev/api',
@@ -479,12 +486,25 @@
     async function openPickerForRow(li, button) {
         loadSettings();
 
+        debugLog('Picker click', { li, button });
+
         const itemId = parseItemId(li);
         const itemName = parseItemName(li);
         const input = getPriceInput(li);
         const marketValue = getMarketValue(li);
 
+        debugLog('Parsed row data', {
+            itemId,
+            itemName,
+            hasInput: Boolean(input),
+            marketValue
+        });
+
         if (!itemId || !input) {
+            debugLog('Setting error state: missing itemId or input', {
+                itemId,
+                hasInput: Boolean(input)
+            });
             button.classList.add('error');
             return;
         }
@@ -494,21 +514,47 @@
         button.classList.add('loading');
 
         try {
+            debugLog('Fetching marketplace item', { itemId });
             const data = await getMarketplaceItem(itemId);
+            debugLog('Marketplace response', data);
+
             const rawListings = data?.listings ?? data?.data?.listings ?? data?.results ?? data?.data ?? [];
+            debugLog('Raw listings candidate', {
+                isArray: Array.isArray(rawListings),
+                length: Array.isArray(rawListings) ? rawListings.length : null,
+                rawListings
+            });
+
             const listings = chooseListings(rawListings);
+            debugLog('Normalized listings', {
+                length: listings.length,
+                listings
+            });
+
             if (!listings.length) {
+                debugLog('Setting error state: no usable listings', { itemId, data });
                 console.warn(`[${SCRIPT.name}] No usable listings for item ${itemId}`, data);
                 button.classList.add('error');
                 return;
             }
+
+            debugLog('Opening picker modal', {
+                itemId,
+                itemName,
+                listingCount: listings.length
+            });
             openPicker({ itemId, itemName, listings, input, marketValue });
         } catch (error) {
+            debugLog('Setting error state: request threw', error);
             console.error(`[${SCRIPT.name}]`, error);
             button.classList.add('error');
         } finally {
             button.disabled = false;
             button.classList.remove('loading');
+            debugLog('Picker click finished', {
+                itemId,
+                buttonClasses: button.className
+            });
         }
     }
 
